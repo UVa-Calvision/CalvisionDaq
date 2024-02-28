@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
     // Load the Correction Tables from the Digitizer flash
     CAEN_DGTZ_DRS4Correction_t X742Tables[MAX_X742_GROUP_SIZE];
 
-    gLastErrorCode = CAEN_DGTZ_GetCorrectionTables(fHandle, CAEN_DGTZ_DRS4_5GHz, (void*)X742Tables);
+    gLastErrorCode = CAEN_DGTZ_GetCorrectionTables(fHandle, CAEN_DGTZ_DRS4_1GHz, (void*)X742Tables);
     check_error("Failed to retrieve tables");
 
     SaveCorrectionTables(X742Tables, SERNUM);

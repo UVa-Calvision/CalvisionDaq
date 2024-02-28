@@ -4,7 +4,9 @@
 #include <TString.h>
 #include <array>
 #include <optional>
-#include "common.h"
+
+#include "forward.h"
+#include "calibration.h"
 
 class DRSGroupData {
 public:
@@ -15,7 +17,7 @@ public:
     UIntType GetFR() {return fFR;}
 
     // Calibration
-    void LoadCalibrations(TString file1, TString file2, TString file3);
+    void LoadCalibrations(const std::string& filename);
 
     // Setters
     void SetTriggerCell(UIntType val);
@@ -39,8 +41,8 @@ public:
     void channel_value(int channel, SampleArray<FloatingType>& channel_buffer) const;
     void trigger_value(SampleArray<FloatingType>& trigger_buffer) const;
 
-    // Event timestep in us
-    FloatingType timestamp() const { return 8.5e-3 * static_cast<FloatingType>(fTimeStamp); }
+    // Event timestep in ns
+    FloatingType timestamp() const { return 8.5 * static_cast<FloatingType>(fTimeStamp); }
 
 protected:
     // Cell index for a given sample

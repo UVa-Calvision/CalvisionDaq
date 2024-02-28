@@ -3,4 +3,7 @@ LIBS=$(shell root-config --glibs)
 LFLAGS=$(shell root-config --ldflags)
 
 all:
-	g++ $(CFLAGS) -o test main_reader.cxx DRSGroupData.cxx x742RawReader.cxx $(LIBS) $(LFLAGS)
+	g++ $(CFLAGS) -o test main_reader.cxx DRSGroupData.cxx x742RawReader.cxx -I../include $(LIBS) $(LFLAGS)
+
+clean:
+	rm -rf test *.root *.png

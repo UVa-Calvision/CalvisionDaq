@@ -2,10 +2,6 @@
 #include <fstream>
 #include <TString.h>
 
-#include <cstring>
-
-#include <iostream>
-
 //====================================
 DRSGroupData::DRSGroupData() {
     fFR = 0;
@@ -25,42 +21,33 @@ void DRSGroupData::SetTriggerCell(UIntType val) {
 }
 
 //====================================
-void DRSGroupData::LoadCalibrations(TString fileCell, TString filePhase, TString fileTime) {
-    int ch, ce;
-    Double_t offset;
-    //===========
-    std::ifstream icelloffset( fileCell.Data() );
-    for (int i = 0; i < (N_Channels + 1) * N_Samples; i++) {
-        icelloffset >> ch >> ce >> offset;
-
-        if (ch == 9)
-            fCalibration.trigger_offset[ce] = offset;
-        else
-            fCalibration.channel_offset[ch][ce] = offset;
-    }
-    icelloffset.close();
-
-    //===========
-    std::ifstream icelltime( fileTime.Data() );
-    for(int icell = 0; icell < N_Samples; ++icell) {
-        icelltime >> ce >> offset;
-        fCalibration.timing_correction[ce] = offset;
-    }
-    icelltime.close();
+void DRSGroupData::LoadCalibrations(const std::string& filename) {
+    fCalibration.read(filename);
 }
 
 //====================================
 void DRSGroupData::sample_timing(SampleArray<Double_t>& time_buffer) const {
-  double time_offset = fCalibration.timing_correction[fTC];
-  for (int i = 0; i < N_Samples; i++) {
-      int cell = cell_index(i);
-      if (cell == 0) {
-          time_offset = fCalibration.timing_correction[(fTC + N_Samples - 1) % N_Samples]
-              - (fCalibration.timing_correction[N_Samples-1] - fCalibration.timing_correction[0]);
-      }
 
-      time_buffer[i] = fCalibration.timing_correction[cell] - time_offset;
-  }
+    // double dt = 0.2;
+    // if (fFR == 1) dt = 0.4;
+    // if (fFR == 2) dt = 1.0;
+    // if (fFR == 3) dt = 4.0 / 3.0;
+
+    // time_buffer[0] = 0;
+    // for (int i = 1; i < time_buffer.size(); i++) {
+    //     time_buffer[i] = time_buffer[i-1] + dt;
+    // }
+
+    double time_offset = fCalibration.timing_correction[fTC];
+    for (int i = 0; i < N_Samples; i++) {
+        int cell = cell_index(i);
+        if (cell == 0) {
+            time_offset = fCalibration.timing_correction[(fTC + N_Samples - 1) % N_Samples]
+                          - (fCalibration.timing_correction[N_Samples-1] - fCalibration.timing_correction[0]);
+        }
+
+        time_buffer[i] = fCalibration.timing_correction[cell] - time_offset;
+    }
 }
 
 //====================================

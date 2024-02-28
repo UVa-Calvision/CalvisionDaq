@@ -1,5 +1,7 @@
 #include <string>
 
+#include "forward.h"
+
 class DT5742 {
  public:
   DT5742(int link=0, int nev=100, bool spill=false);
@@ -12,7 +14,7 @@ class DT5742 {
   long EventsTarget() {return fNRecTarget;}
   long EventsInDisk() {return fNRecEvents;}
 
-  ~DT5742() {;}
+  ~DT5742() { Close(); }
  private:
   int fHandle;
   bool fKeepSavingWhileInSpill;
@@ -22,4 +24,7 @@ class DT5742 {
   long fNTimesNoReading;
   long fNTimesAtFull;
   long fNIterations;
+
+  void write_register(UIntType address, UIntType data);
+  UIntType read_register(UIntType address);
 };

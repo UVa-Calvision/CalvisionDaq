@@ -5,8 +5,6 @@
 
 #include "bitmanip.h"
 
-#include <bitset>
-
 //=======
 x742RawReader::x742RawReader(TString filename) 
  : fIFS(filename.Data())

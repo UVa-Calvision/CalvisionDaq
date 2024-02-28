@@ -3,8 +3,11 @@ carlosdaq.tar
 daq/daq
 daq/daq2
 daq/calib
+daq/readout
 daq/output.dat
+*.dat
 dt5742-libraries
 *.png
 data_reader/file.root
 data_reader/test
+*.pdf

@@ -5,7 +5,8 @@
 #include "TFile.h"
 #include "TTree.h"
 
-#include "common.h"
+#include "forward.h"
+#include "name_conventions.h"
 
 struct EventBuffer {
 
@@ -53,19 +54,19 @@ struct EventBuffer {
     }
 };
 
-TString table_name(int group, const std::string& name) {
-    return TString(("../calib/29622/Tables_gr" + std::to_string(group) + "_" + name + ".txt").c_str());
+std::string table_name(int group) {
+    return "../calib/29622/Tables_gr" + std::to_string(group) + ".txt";
 }
 
 
 int main(void) {
 
-    x742RawReader reader("../daq/output.dat");
+    x742RawReader reader("../daq/output0.dat");
 
     EventBuffer buffer;
     for (int i = 0; i < N_Groups; i++) {
         reader.SetGroupData(i, &buffer.data[i]);
-        buffer.data[i].LoadCalibrations(table_name(i, "cell"), table_name(i, "sample"), table_name(i, "time"));
+        buffer.data[i].LoadCalibrations(table_name(i));
     }
 
     std::unique_ptr<TFile> myFile(TFile::Open("file.root", "RECREATE"));

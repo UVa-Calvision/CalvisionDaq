@@ -1,8 +1,7 @@
 #pragma once
 
 #include <tuple>
-#include <array>
-#include "common.h"
+#include "forward.h"
 
 namespace bmp {
 
@@ -32,8 +31,8 @@ auto read(UIntType data) {
 }
 
 inline
-std::array<UIntType, 8> read_8_channels(const std::array<UIntType, 3>& data) {
-    std::array<UIntType, 8> channels;
+ChannelArray<UIntType> read_8_channels(const std::array<UIntType, 3>& data) {
+    ChannelArray<UIntType> channels;
 
     UIntType c5_high, c2_high;
 
