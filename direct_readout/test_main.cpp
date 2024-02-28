@@ -10,20 +10,26 @@ using namespace std::chrono_literals;
 // std::mutex done_mutex;
 // volatile bool done = false;
 
-constexpr UIntType transfer_size = 25;
+constexpr UIntType transfer_size = 20;
+using EventType = UIntType[EventSize / sizeof(UIntType)];
 
 void run_test() {
+    static_assert(sizeof(EventType) == EventSize);
+
     BufferedFileWriter out;
 
-    std::this_thread::sleep_for(2000ms);
+    // std::this_thread::sleep_for(2000ms);
 
     // std::thread worker_thread(write_loop, std::ref(out));
 
-    for (UIntType i = 0; i < 10000; i++) {
-        if (i % 1 == 0) std::cout << "Step " << i << "\n";
-        UIntType x[transfer_size];
+    UIntType a = 0;
+    for (UIntType i = 0; i < 1000; i++) {
+        if (i % 100 == 0) std::cout << "Step " << i << "\n";
+        EventType x[transfer_size];
         for (int j = 0; j < transfer_size; j++) {
-            x[j] = transfer_size * i + j;
+            for (int k = 0; k < EventSize / sizeof(UIntType); k++) {
+                x[j][k] = a++;
+            }
         }
 
         out.write((BufferedType*) x, EventSize * transfer_size);

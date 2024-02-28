@@ -3,10 +3,12 @@
 #include <mutex>
 #include <iostream>
 #include <chrono>
+#include <condition_variable>
 
 using namespace std::chrono_literals;
 
 std::mutex swap_mutex, done_mutex;
+std::condition_variable cleared_intermediate, ready_to_save;
 
 #include <sstream>
 #include <string>
@@ -39,16 +41,12 @@ BufferedFileWriter::~BufferedFileWriter()
 }
 
 void BufferedFileWriter::write(const BufferedType* t, UIntType count) {
-    if (count * sizeof(BufferedType) > BufferSize) {
-        std::cout << "Attempting to write more events than in a single buffer!\n"
-            << "Buffer Size: " << BufferSize << "; write size: " << count * sizeof(BufferedType) << "\n";
-    }
-    UIntType written = input_buffer_->write(t, count);
-    if (input_buffer_->full()) {
-        swap_write_buffers();
+    UIntType written = 0;
+    while (written < count) {
+        written += input_buffer_->write(t + written, count - written);
 
-        if (written < count) {
-            input_buffer_->write(t + written, count - written);
+        if (input_buffer_->full()) {
+            swap_write_buffers();
         }
     }
 }
@@ -62,30 +60,31 @@ bool BufferedFileWriter::finished() const {
 }
 
 void BufferedFileWriter::swap_write_buffers() {
-    while (intermediate_buffer_dirty()) {
-        std::this_thread::sleep_for(1ms);
-    }
+    std::unique_lock<std::mutex> lock(swap_mutex);
+    cleared_intermediate.wait(lock, [this] () { return !this->intermediate_buffer_dirty(); });
 
-    std::lock_guard<std::mutex> lock(swap_mutex);
     std::swap(input_buffer_, intermediate_buffer_);
+
+    lock.unlock();
+    ready_to_save.notify_one();
 }
 
 void BufferedFileWriter::swap_output_buffers() {
     output_buffer_->clear();
 
-    while (!finished() && !intermediate_buffer_dirty()) {
-        std::this_thread::sleep_for(1ms);
-    }
+    std::unique_lock<std::mutex> lock(swap_mutex);
+    ready_to_save.wait(lock, [this] () { return this->intermediate_buffer_dirty() || this->finished(); });
 
     if (finished()) return;
 
-    std::lock_guard<std::mutex> lock(swap_mutex);
     std::swap(output_buffer_, intermediate_buffer_);
+    
+    lock.unlock();
+    cleared_intermediate.notify_one();
 }
 
 void BufferedFileWriter::save() {
     if (output_buffer_->size() > 0) {
-        std::cout << "[thread] Writing " << output_buffer_->size() << " bytes\n";
         outfile_.write((char*) output_buffer_->buffer(), output_buffer_->size() * sizeof(BufferedType));
         outfile_.flush();
     }
@@ -97,6 +96,8 @@ void BufferedFileWriter::close() {
         done_mutex.lock();
         finished_ = true;
         done_mutex.unlock();
+
+        ready_to_save.notify_one();
 
         saving_thread.join();
     }
