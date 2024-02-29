@@ -8,10 +8,10 @@ CAEN_DGTZ_ErrorCode decode(UIntType*& buffer, CAEN_DGTZ_X742_GROUP_t& group);
 CAEN_DGTZ_ErrorCode decode(UIntType* buffer, CAEN_DGTZ_X742_EVENT_t& event);
 
 static constexpr std::array<FloatingType, 4> sampling_period = {
+    1.0 / 5.0,
     1.0 / 2.5,
     1.0 / 1.0,
-    1.0 / 5.0,
-    1.0 / 5.0
+    1.0 / 0.750
 };
 
 struct x742GroupData {
@@ -21,6 +21,9 @@ struct x742GroupData {
     UIntType start_index_cell;
     UIntType frequency;
     bool trigger_digitized;
+
+    double trigger_time;
+    FloatingType sample_period;
 
     void ApplyDataCorrection(CAEN_DGTZ_DRS4Correction_t*, int);
     void PeakCorrection();

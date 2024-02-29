@@ -74,6 +74,7 @@ public:
                          size)
                     = bmp::read<2,10,2,2,3,1,12>(input.read_int());
                 group_data.trigger_digitized = (TR == 1);
+                group_data.sample_period = sampling_period[group_data.frequency];
 
                 // TODO: check size == 3 * N_Samples
 
@@ -93,6 +94,7 @@ public:
                 }
 
                 std::tie(std::ignore, group_data.trigger_time_tag) = bmp::read<2,30>(input.read_int());
+                group_data.trigger_time = 8.5 * group_data.trigger_time_tag;
             }
         }
 
@@ -118,44 +120,46 @@ private:
 };
 
 
-#include <TFile.h>
-#include <TTree.h>
+#include "RootIO.h"
 
-
-class RootWriter {
-public:
-    RootWriter()
-    {
-        file_ = TFile::Open("file.root", "RECREATE");
-        tree_ = new TTree("tree", "DRS Data");
-    }
-
-    void setup(x742EventData& event) {
-        tree_->Branch("event_counter", &event.event_counter);
-        tree_->Branch("time_tag", &event.time_tag);
-
-        for (int i = 0; i < N_Groups; i++) {
-            tree_->Branch(TString(name_timestamp(i)), &event.group_data[i].trigger_time_tag);
-            tree_->Branch(TString(name_trigger(i)), event.group_data[i].trigger_data.data(), TString(name_trigger(i)) + "[1024]/F");
-            for (int j = 0; j < N_Channels; j++) {
-                tree_->Branch(TString(name_channel(i,j)), event.group_data[i].channel_data[j].data(), TString(name_channel(i,j)) + "[1024]/F");
-            }
-        }
-    }
-
-    void handle_event() {
-        tree_->Fill();
-    }
-
-    void write() {
-        tree_->Write();
-        file_->Close();
-    }
-
-private:
-    TTree* tree_;
-    TFile* file_;
-};
+// #include <TFile.h>
+// #include <TTree.h>
+// 
+// 
+// class RootWriter {
+// public:
+//     RootWriter()
+//     {
+//         file_ = TFile::Open("file.root", "RECREATE");
+//         tree_ = new TTree("tree", "DRS Data");
+//     }
+// 
+//     void setup(x742EventData& event) {
+//         tree_->Branch("event_counter", &event.event_counter);
+//         tree_->Branch("time_tag", &event.time_tag);
+// 
+//         for (int i = 0; i < N_Groups; i++) {
+//             tree_->Branch(TString(name_timestamp(i)), &event.group_data[i].trigger_time_tag);
+//             tree_->Branch(TString(name_trigger(i)), event.group_data[i].trigger_data.data(), TString(name_trigger(i)) + "[1024]/F");
+//             for (int j = 0; j < N_Channels; j++) {
+//                 tree_->Branch(TString(name_channel(i,j)), event.group_data[i].channel_data[j].data(), TString(name_channel(i,j)) + "[1024]/F");
+//             }
+//         }
+//     }
+// 
+//     void handle_event() {
+//         tree_->Fill();
+//     }
+// 
+//     void write() {
+//         tree_->Write();
+//         file_->Close();
+//     }
+// 
+// private:
+//     TTree* tree_;
+//     TFile* file_;
+// };
 
 
 #include "async_input.h"
@@ -176,7 +180,7 @@ int main(void) {
         while (input) {
             decoder.read_event(input);
             decoder.apply_corrections();
-            root_io.handle_event();
+            root_io.handle_event(decoder.event());
         }
     }
 
