@@ -11,20 +11,19 @@
 #include "../include/name_conventions.h"
 
 void plot_waveform(const TString& name, const std::vector<Float_t>& x, const std::vector<Float_t>& y) {
-
     TCanvas* canvas = new TCanvas("canvas", "canvas", 800, 800);
 
     TGraph* graph = new TGraph(x.size(), x.data(), y.data());
 
     graph->SetName(name);
     graph->SetTitle(name + ";Sample Time [ns];" + name);
-
-    graph->Draw();
+    graph->Draw("AC");
 
     canvas->SaveAs(name + ".png");
 
     delete graph;
     delete canvas;
+
 }
 
 void plot_channels() {
@@ -74,11 +73,11 @@ void plot_channels() {
     for (auto event = 0; event < tree->GetEntries(); event++) {
         tree->GetEvent(event);
 
-        if (event >= 1) break;
+        if (event >= 10) break;
 
         for (int i = 0; i < N_Groups; i++) {
-            total_timestamps[i].push_back(timestamps[i]);
-            std::cout << "Timestamp: " << timestamps[i] << "\n";
+            total_timestamps[i].push_back(8.5 * timestamps[i]);
+            // std::cout << "Timestamp: " << timestamps[i] << "\n";
 
             for (int s = 0; s < N_Samples; s++) {
 

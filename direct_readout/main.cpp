@@ -58,7 +58,7 @@ int main(void) {
 
         BufferedFileWriter buffered_io;
         digi.set_event_callback([&buffered_io] (const char* data, UIntType count) {
-                    buffered_io.write(data, count);
+                    buffered_io.write((const BufferedType*) data, count * sizeof(char) / sizeof(BufferedType));
                 });
         std::cout << "BufferSize: " << BufferSize << "\n";
 

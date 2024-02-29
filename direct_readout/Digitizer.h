@@ -7,6 +7,7 @@
 #include "CaenEnums.h"
 #include "forward.h"
 #include "CaenError.h"
+#include "Calibration.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -34,7 +35,7 @@ public:
         check(CAEN_DGTZ_GetInfo(handle_, &board_info_));
 
         // Allocate event space
-        allocate_event();
+        // allocate_event();
     }
 
     ~Digitizer()
@@ -51,7 +52,7 @@ public:
             readout_size_ = 0;
         }
 
-        deallocate_event();
+        // deallocate_event();
     }
 
     void reset() {
@@ -88,7 +89,14 @@ public:
 
     void begin_acquisition() {
         // Setup calibration and corrections
-        check(CAEN_DGTZ_GetCorrectionTables(handle_, frequency_, correction_table_.data()));
+        // {
+        //     check(CAEN_DGTZ_GetCorrectionTables(handle_, frequency_, correction_table_.data()));
+        //     BinaryOutputFileStream outfile("calibration.dat");
+        //     for (const auto& table : correction_table_) {
+        //         DRSGroupCalibration calibration(table);
+        //         calibration.write(outfile);
+        //     }
+        // }
 
         // Allocate readout memory
         check(CAEN_DGTZ_MallocReadoutBuffer(handle_, &readout_buffer_, &readout_size_));
@@ -101,6 +109,15 @@ public:
         check(CAEN_DGTZ_ClearData(handle_));
         query_status();
         std::cout << "Acquisition started.\n";
+    }
+
+    void write_calibration_tables() {
+        CalibrationTables tables;
+        tables.load_from_digitizer(handle_);
+
+        for (const auto freq : Frequencies) {
+            tables.write(freq);
+        }
     }
 
     void end_acquisition() {
@@ -156,8 +173,8 @@ public:
         event_callback_ = event_callback;
     }
 
-    CAEN_DGTZ_EventInfo_t* event_info_ptr() { return &event_info_; }
-    EventType* decoded_event_ptr() { return &decoded_event_; }
+    // CAEN_DGTZ_EventInfo_t* event_info_ptr() { return &event_info_; }
+    // EventType* decoded_event_ptr() { return &decoded_event_; }
 
 private:
     int handle_; 
@@ -165,10 +182,10 @@ private:
     char* readout_buffer_;
     UIntType readout_size_;
 
-    CAEN_DGTZ_EventInfo_t event_info_;
-    EventType decoded_event_;
+    // CAEN_DGTZ_EventInfo_t event_info_;
+    // EventType decoded_event_;
     CAEN_DGTZ_DRS4Frequency_t frequency_;
-    std::array<CAEN_DGTZ_DRS4Correction_t, N_Groups> correction_table_;
+    GroupArray<CAEN_DGTZ_DRS4Correction_t> correction_table_;
 
     CAEN_DGTZ_BoardInfo_t board_info_;
 
@@ -178,20 +195,20 @@ private:
     bool running_, ready_, buffer_full_;
     UIntType num_events_read_;
 
-    void allocate_event() {
-        for (int i = 0; i < MAX_X742_GROUP_SIZE; i++) {
-            for (int j = 0; j < MAX_X742_CHANNEL_SIZE; j++) {
-                decoded_event_.DataGroup[i].DataChannel[j] = (float*) malloc(N_Samples * sizeof(float));
-            }
-        }
-    }
+    // void allocate_event() {
+    //     for (int i = 0; i < MAX_X742_GROUP_SIZE; i++) {
+    //         for (int j = 0; j < MAX_X742_CHANNEL_SIZE; j++) {
+    //             decoded_event_.DataGroup[i].DataChannel[j] = (float*) malloc(N_Samples * sizeof(float));
+    //         }
+    //     }
+    // }
 
-    void deallocate_event() {
-        for (int i = 0; i < MAX_X742_GROUP_SIZE; i++) {
-            for (int j = 0; j < MAX_X742_CHANNEL_SIZE; j++) {
-                free(decoded_event_.DataGroup[i].DataChannel[j]);
-                decoded_event_.DataGroup[i].DataChannel[j] = nullptr;
-            }
-        }
-    }
+    // void deallocate_event() {
+    //     for (int i = 0; i < MAX_X742_GROUP_SIZE; i++) {
+    //         for (int j = 0; j < MAX_X742_CHANNEL_SIZE; j++) {
+    //             free(decoded_event_.DataGroup[i].DataChannel[j]);
+    //             decoded_event_.DataGroup[i].DataChannel[j] = nullptr;
+    //         }
+    //     }
+    // }
 };

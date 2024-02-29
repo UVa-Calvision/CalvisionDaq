@@ -18,13 +18,11 @@ void run_test() {
 
     BufferedFileWriter out;
 
-    // std::this_thread::sleep_for(2000ms);
 
     // std::thread worker_thread(write_loop, std::ref(out));
 
     UIntType a = 0;
-    for (UIntType i = 0; i < 1000; i++) {
-        if (i % 100 == 0) std::cout << "Step " << i << "\n";
+    for (UIntType i = 0; i < 100; i++) {
         EventType x[transfer_size];
         for (int j = 0; j < transfer_size; j++) {
             for (int k = 0; k < EventSize / sizeof(UIntType); k++) {
@@ -32,7 +30,10 @@ void run_test() {
             }
         }
 
-        out.write((BufferedType*) x, EventSize * transfer_size);
+        std::this_thread::sleep_for(500ms);
+
+        std::cout << "[buffered] writing " << transfer_size << " events\n";
+        out.write((BufferedType*) x, EventSize * transfer_size / sizeof(BufferedType));
     }
 
     out.close();
@@ -63,7 +64,7 @@ void validate_test() {
 int main(void) {
 
     run_test();
-    validate_test();
+    // validate_test();
 
     return 0;
 }

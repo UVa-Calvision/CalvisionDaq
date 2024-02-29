@@ -1,3 +1,7 @@
 test
 thread_test
-output.dat
+*.dat
+*.png
+*.pdf
+decode
+calibrate

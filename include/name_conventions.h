@@ -28,7 +28,7 @@ std::string canonical_name(const Arg& a, const Next& next, const Args&... args) 
 
 inline
 std::string name_timestamp(int g) {
-    return canonical_name("timestap", g);
+    return canonical_name("timestamp", g);
 }
 
 inline

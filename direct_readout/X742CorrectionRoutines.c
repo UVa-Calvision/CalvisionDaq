@@ -19,6 +19,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "X742_Data.h"
+
 #define MAX_READ_CHAR               1000
 #define MAX_BASE_INPUT_FILE_LENGTH  1000
 
