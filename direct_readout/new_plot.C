@@ -6,6 +6,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 #include "../include/forward.h"
 #include "../include/name_conventions.h"
@@ -22,8 +23,8 @@ void new_plot() {
     }
 
     // Branch buffers
-    Float_t vertical_gain[4];
-    Float_t vertical_offset[4];
+    Float_t vertical_gain[N_Channels];
+    Float_t vertical_offset[N_Channels];
     Float_t horizontal_interval;
     Double_t horizontal_offset;
     Int_t event;
@@ -31,7 +32,7 @@ void new_plot() {
     Double_t trigger_offset;
     Double_t time[N_Samples];
     Int_t samples;
-    Short_t channels[4][N_Samples];
+    Short_t channels[N_Channels][N_Samples];
 
     tree->SetBranchAddress("vertical_gain", vertical_gain);
     tree->SetBranchAddress("veritcal_offset", vertical_offset);
@@ -51,7 +52,8 @@ void new_plot() {
 
 
     const auto adc_voltage = [&vertical_offset, &vertical_gain, &channels] (int channel, int sample) {
-            return vertical_gain[channel] * (static_cast<Double_t>(channels[channel][sample]) / 4095.0) - vertical_offset[channel];
+            return static_cast<Double_t>(channels[channel][sample]) - 0x0800;
+            // return vertical_gain[channel] * (static_cast<Double_t>(channels[channel][sample]) / 4095.0) - vertical_offset[channel];
         };
 
 
@@ -83,6 +85,13 @@ void new_plot() {
     for (int i = 0; i < num_examples; i++) {
         example_graphs[i] = new TGraph(N_Samples, example_time_data[i].data(), example_waveform_data[i].data());
         multigraph->Add(example_graphs[i]);
+
+        auto low  = *std::min_element(example_waveform_data[i].begin(), example_waveform_data[i].end());
+        auto high = *std::max_element(example_waveform_data[i].begin(), example_waveform_data[i].end());
+
+        std::cout << "Example " << i << " minimum voltage: " << low << "\n";
+        std::cout << "Example " << i << " maximum voltage: " << high << "\n";
+        std::cout << "Example " << i << " midpoint voltage: " << (high + low) / 2 << "\n";
     }
 
     multigraph->SetTitle("Example Waveforms;Time [ns];Channel value");

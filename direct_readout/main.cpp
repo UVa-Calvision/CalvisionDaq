@@ -75,7 +75,7 @@ int main(void) {
         UIntType n_times_buffer_full = 0;
         UIntType n_times_buffer_full_and_not_ready = 0;
 
-        while (digi.running() && digi.num_events_read() < 3000) {
+        while (digi.running() && digi.num_events_read() < 1000) {
             digi.query_status();
 
             if (digi.buffer_full()) {
