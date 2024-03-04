@@ -11,3 +11,4 @@ dt5742-libraries
 data_reader/file.root
 data_reader/test
 *.pdf
+*.root

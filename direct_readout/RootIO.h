@@ -27,7 +27,7 @@ public:
     void setup(x742EventData& event) {
         // Using group 0 only
         tree_->Branch("vertical_gain", vertical_gain_, "vertical_gain[8]/F");
-        tree_->Branch("veritcal_offset", vertical_offset_, "vertical_offset[8]/F");
+        tree_->Branch("vertical_offset", vertical_offset_, "vertical_offset[8]/F");
         tree_->Branch("horizontal_interval", &event.group_data[0].sample_period, "horizontal_interval/F");
         tree_->Branch("horizontal_offset", &horizontal_offset_, "horizontal_offset/D");
         tree_->Branch("event", &event.event_counter, "event/I");
