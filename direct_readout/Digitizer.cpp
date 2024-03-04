@@ -2,6 +2,173 @@
 
 #include <iostream>
 
+/*
+ * 16-bit DAC sets the DC offset.
+ */
+
+UIntType DAC_voltage_to_register(float voltage) {
+    if (voltage > 0 || voltage < -Digitizer::voltage_p2p()) {
+        std::cout << "[ERROR] DAC voltage outside [-V_pp,0] range: " << voltage << "\n";
+    }
+    return static_cast<UIntType>(-voltage * static_cast<float>(0xFFFF) / Digitizer::voltage_p2p());
+}
+
+float DAC_register_to_voltage(UIntType reg) {
+    if (reg > 0xFFFF) {
+        std::cout << "[ERROR] DAC voltage register larger than max size: " << reg << "\n";
+    }
+    return -Digitizer::voltage_p2p() * static_cast<float>(reg) / static_cast<float>(0xFFFF);
+}
+
+float DAC_lower_bound_voltage(UIntType reg) {
+    return -Digitizer::voltage_p2p() - DAC_register_to_voltage(reg);
+}
+
+float DAC_upper_bound_voltage(UIntType reg) {
+    return -DAC_register_to_voltage(reg);
+}
+
+float DAC_middle_voltage(UIntType reg) {
+    return -0.5 * Digitizer::voltage_p2p() - DAC_register_to_voltage(reg);
+}
+
+UIntType DAC_middle_voltage_to_register(float voltage) {
+    return DAC_voltage_to_register(-(voltage + 0.5 * Digitizer::voltage_p2p()));
+}
+
+Digitizer::Digitizer()
+    : handle_(-1)
+    , readout_buffer_(nullptr)
+    , readout_size_(0)
+    , frequency_(CAEN_DGTZ_DRS4_1GHz)
+{
+    // Open digitizer
+    check(CAEN_DGTZ_OpenDigitizer(CAEN_DGTZ_USB, 0, 0, 0, &handle_));
+
+    // Read board info
+    check(CAEN_DGTZ_GetInfo(handle_, &board_info_));
+
+    // Allocate event space
+    // allocate_event();
+}
+
+Digitizer::~Digitizer()
+{
+    if (handle_ >= 0) {
+        check(CAEN_DGTZ_CloseDigitizer(handle_));
+        handle_ = -1;
+        std::cout << "Digitizer closed.\n";
+    }
+
+    if (readout_buffer_) {
+        check(CAEN_DGTZ_FreeReadoutBuffer(&readout_buffer_));
+        readout_buffer_ = nullptr;
+        readout_size_ = 0;
+    }
+
+    // deallocate_event();
+}
+
+void Digitizer::reset() {
+    check(CAEN_DGTZ_Reset(handle_));
+}
+
+void Digitizer::setup() {
+    reset();
+
+    // check(CAEN_DGTZ_IRQWait(handle_, 10));
+
+    // Use TTL IO
+    // TODO: Probably not using IO?
+    check(CAEN_DGTZ_SetIOLevel(handle_, CAEN_DGTZ_IOLevel_TTL));
+
+    // Use full 1024 event buffer
+    check(CAEN_DGTZ_SetMaxNumEventsBLT(handle_, 1000));
+
+    // 1 GHz Sampling frequency
+    check(CAEN_DGTZ_SetDRS4SamplingFrequency(handle_, frequency_));
+
+    // Only using group 1
+    check(CAEN_DGTZ_SetGroupEnableMask(handle_, 0b01));
+
+    // ----- Trigger
+    // Enable fast trigger TR0
+    check(CAEN_DGTZ_SetFastTriggerMode(handle_, CAEN_DGTZ_TRGMODE_ACQ_ONLY));
+
+    // Don't digitize trigger (less hang time)
+    check(CAEN_DGTZ_SetFastTriggerDigitizing(handle_, CAEN_DGTZ_DISABLE));
+
+    // Set post trigger size (in %)
+    check(CAEN_DGTZ_SetPostTriggerSize(handle_, 50));
+
+    // Set channel offsets to middle scale (0x7FFF)
+    // ChannelArray<UIntType> offsets;
+    // for (auto& offset : offsets) offset = 0x7FFF /*+ static_cast<UIntType>(7 * 214)*/;
+    // set_channel_offsets(offsets);
+}
+
+void Digitizer::begin_acquisition() {
+    // Allocate readout memory
+    check(CAEN_DGTZ_MallocReadoutBuffer(handle_, &readout_buffer_, &readout_size_));
+    std::cout << "Allocated " << readout_size_ << " bytes in memory for readout\n";
+
+    // Start acquisition
+    num_events_read_ = 0;
+
+    check(CAEN_DGTZ_SWStartAcquisition(handle_));
+    check(CAEN_DGTZ_ClearData(handle_));
+    query_status();
+    std::cout << "Acquisition started.\n";
+}
+
+void Digitizer::write_calibration_tables() {
+    CalibrationTables tables;
+    tables.load_from_digitizer(handle_);
+
+    for (const auto freq : Frequencies) {
+        tables.write(freq);
+    }
+}
+
+void Digitizer::end_acquisition() {
+    // Stop acquisition
+    check(CAEN_DGTZ_SWStopAcquisition(handle_));
+    std::cout << "Acquisition stopped.\n";
+}
+
+void Digitizer::read() {
+
+    check(CAEN_DGTZ_ReadData(handle_,
+                             CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
+                             readout_buffer_,
+                             &readout_size_));
+    event_callback_(readout_buffer_, readout_size_);
+    
+    UIntType num_events = 0;
+    check(CAEN_DGTZ_GetNumEvents(handle_, readout_buffer_, readout_size_, &num_events));
+    num_events_read_ += num_events;
+}
+
+#include <bitset>
+
+void Digitizer::query_status() {
+    UIntType status_reg;
+    check(CAEN_DGTZ_ReadRegister(handle_, CAEN_DGTZ_ACQ_STATUS_ADD, &status_reg));
+    // std::cout << "status: " << std::bitset<32>(status_reg) << "\n";
+    running_     = (status_reg & 0b0000'0100) != 0;
+    ready_       = (status_reg & 0b0000'1000) != 0;
+    buffer_full_ = (status_reg & 0b0001'0000) != 0;
+}
+
+bool Digitizer::ready() const { return ready_; }
+bool Digitizer::running() const { return running_; }
+bool Digitizer::buffer_full() const { return buffer_full_; }
+UIntType Digitizer::num_events_read() const { return num_events_read_; }
+
+void Digitizer::set_event_callback(const CallbackFunc& event_callback) {
+    event_callback_ = event_callback;
+}
+
 void Digitizer::print() const {
     // Board info
     std::cout << " ----- Board Info:\n"
@@ -87,7 +254,11 @@ void Digitizer::print() const {
     for (int i = 0; i < N_Channels; i++) {
         UIntType offset;
         check(CAEN_DGTZ_GetChannelDCOffset(handle_, i, &offset));
-        std::cout << "Channel " << i << " DC offset: " << offset << "\n";
+        float dc_offset = -voltage_p2p() * static_cast<float>(offset) / static_cast<float>(0xFFFF);
+        std::cout << "Channel " << i << " DC offset: " << dc_offset << "\n";
+        std::cout << "Channel " << i << " range: ["
+            << -(dc_offset + voltage_p2p()) << ", "
+            << -(dc_offset +             0) << "]\n";
     }
 
     CAEN_DGTZ_ZS_Mode_t zs_mode;
@@ -95,4 +266,15 @@ void Digitizer::print() const {
     std::cout << "Zero suppression mode: " << ZS_Mode_to_string(zs_mode) << "\n";
 
     std::cout << "\n";
+}
+
+void Digitizer::set_channel_offsets(const ChannelArray<UIntType>& offsets) {
+    for (int c = 0; c < N_Channels; c++) {
+        check(CAEN_DGTZ_SetChannelDCOffset(handle_, c, offsets[c]));
+    }
+}
+
+// Peak to peak voltage is 1 V = 1000 mV
+FloatingType Digitizer::voltage_p2p() {
+    return 1000.0;
 }

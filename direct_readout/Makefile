@@ -1,6 +1,6 @@
-CXX_FLAGS=-fPIC -g -O2 
-INCLUDE_DIRS=-L/usr/lib -L. -I../include
-LD_LIBS=-lCAENComm -lCAENDigitizer -lm -lpthread
+CXX_FLAGS=-fPIC -g -O2
+INCLUDE_DIRS=-I../include -I../dt5742-libraries/CAENDigitizer-2.17.0/include
+LD_LIBS=-L../local_install/lib -lCAENComm -lCAENDigitizer -lCAENVME -lm -lpthread -lusb-1.0
 ROOT_FLAGS=$(shell root-config --cflags)
 ROOT_LIBS=$(shell root-config --glibs) $(shell root-config --ldflags)
 
