@@ -99,12 +99,12 @@ void Digitizer::setup() {
     check(CAEN_DGTZ_SetFastTriggerDigitizing(handle_, CAEN_DGTZ_DISABLE));
 
     // Set post trigger size (in %)
-    check(CAEN_DGTZ_SetPostTriggerSize(handle_, 0));
+    check(CAEN_DGTZ_SetPostTriggerSize(handle_, 50));
 
     // Set channel offsets to middle scale (0x7FFF)
-    ChannelArray<UIntType> offsets;
-    for (auto& offset : offsets) offset = 0x7FFF /*+ static_cast<UIntType>(7 * 214)*/;
-    set_channel_offsets(offsets);
+    // ChannelArray<UIntType> offsets;
+    // for (auto& offset : offsets) offset = 0x7FFF /*+ static_cast<UIntType>(7 * 214)*/;
+    // set_channel_offsets(offsets);
 }
 
 void Digitizer::begin_acquisition() {
@@ -149,9 +149,12 @@ void Digitizer::read() {
     num_events_read_ += num_events;
 }
 
+#include <bitset>
+
 void Digitizer::query_status() {
     UIntType status_reg;
     check(CAEN_DGTZ_ReadRegister(handle_, CAEN_DGTZ_ACQ_STATUS_ADD, &status_reg));
+    // std::cout << "status: " << std::bitset<32>(status_reg) << "\n";
     running_     = (status_reg & 0b0000'0100) != 0;
     ready_       = (status_reg & 0b0000'1000) != 0;
     buffer_full_ = (status_reg & 0b0001'0000) != 0;

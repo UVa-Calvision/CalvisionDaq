@@ -13,9 +13,11 @@ public:
         tree_ = new TTree("tree", "DRS Data");
 
         for (int i = 0; i < N_Channels; i++) {
-            vertical_gain_[i] = 1000.0;
-            vertical_offset_[i] = 500.0;
+            vertical_gain_[i] = 1.0 / 0x0FFF;
+            vertical_offset_[i] = 0;
         }
+
+	samples_ = N_Samples;
 
         // TODO: fix
         horizontal_offset_ = 0;
@@ -25,7 +27,7 @@ public:
     void setup(x742EventData& event) {
         // Using group 0 only
         tree_->Branch("vertical_gain", vertical_gain_, "vertical_gain[8]/F");
-        tree_->Branch("veritcal_offset", vertical_offset_, "vertical_offset[8]/F");
+        tree_->Branch("vertical_offset", vertical_offset_, "vertical_offset[8]/F");
         tree_->Branch("horizontal_interval", &event.group_data[0].sample_period, "horizontal_interval/F");
         tree_->Branch("horizontal_offset", &horizontal_offset_, "horizontal_offset/D");
         tree_->Branch("event", &event.event_counter, "event/I");
@@ -42,7 +44,7 @@ public:
             time_[i] = i * event.group_data[0].sample_period;
 
             for (int j = 0; j < N_Channels; j++) {
-                channels_[j][i] = static_cast<Short_t>(event.group_data[0].channel_data[j][i]);
+                channels_[j][i] = static_cast<Short_t>(event.group_data[0].channel_data[j][i] - 0x0800);
             }
         }
         tree_->Fill();
