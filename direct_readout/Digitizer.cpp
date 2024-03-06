@@ -278,3 +278,12 @@ void Digitizer::set_channel_offsets(const ChannelArray<UIntType>& offsets) {
 FloatingType Digitizer::voltage_p2p() {
     return 1000.0;
 }
+
+constexpr static std::array<UIntType, 7> trigger_dc_offsets = {
+        };
+
+constexpr static std::array<UIntType, 7> trigger_thresholds = {
+        };
+
+void Digitizer::set_trigger(TriggerSettings t) {
+}

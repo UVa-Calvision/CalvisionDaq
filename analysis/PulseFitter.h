@@ -89,7 +89,9 @@ struct PulseFitter {
         pulse_fit->SetParameter(3, initial.tau);
         pulse_fit->FixParameter(4, initial.pedestal);
 
-        hist->Fit("pulse", "N");
+        pulse_fit->SetRange(pedestal_end, x_peak);
+
+        hist->Fit("pulse", "NR");
     }
 
     PulseParams* parameters() { return PulseParams::from_array(pulse_fit->GetParameters()); }

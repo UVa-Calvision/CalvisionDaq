@@ -17,6 +17,16 @@
 
 using EventType = CAEN_DGTZ_X742_EVENT_t;
 
+enum TriggerSettings : unsigned int {
+        ECL = 0,
+        NIM = 1,
+        Negative_400mV = 2,
+        Negative_200mV = 3,
+        Bipolar = 4,
+        TTL = 5,
+        Positive_2V = 6
+};
+
 class Digitizer {
 public:
     using CallbackFunc = std::function<void(const char* data, UIntType count)>;
@@ -45,6 +55,8 @@ public:
     void set_channel_offsets(const ChannelArray<UIntType>& offsets);
 
     static FloatingType voltage_p2p();
+
+    void set_trigger(TriggerSettings t);
 
 private:
     int handle_; 

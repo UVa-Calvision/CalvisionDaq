@@ -125,13 +125,13 @@ void analysis(TString filename, int channel) {
 
     const double baseline = params->pedestal;
 
-    const double start = pulse_fit.pedestal_end;
-    const int i_start = pulse_fit.i_pedestal_end;
+    const double start = params->x0;
+    const int i_start = hprof->GetBin(start);
 
     const double peak = pulse_fit.x_peak;
     const int i_peak = pulse_fit.i_peak;
 
-    const double stop = pulse_fit.x_peak + 0 + 2 * params->tau;
+    const double stop = pulse_fit.x_peak + 60;
     const int i_stop = hprof->GetBin(stop);
 
     // try a shorter integration range around peak of profile hist

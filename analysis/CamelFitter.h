@@ -1,30 +1,38 @@
-
+#include "TMath.h"
 #include <vector>
 
 struct HedgehogParams {
 
-    static int size(int N) { return 1 + 2 * N; }
+    static int size(int N) { return 4 + N; }
 
     HedgehogParams(double* arr, int N)
-        : width(arr[0])
-    {
-        heights = arr + 1;
-        peaks = heights + N;
-    }
+        : noise_mean(arr[0]),
+        noise_width(arr[1]),
+        enf(arr[2]),
+        gain(arr[3]),
+        noise_peak_norm(arr+4)
+    {}
 
     double* to_array() const {
-        return &width;
+        return &noise_mean;
     }
-
-    double& width;
-    double* heights;
-    double* peaks;
+    
+    double& noise_mean;
+    double& noise_width;
+    double& enf;
+    double& gain;
+    double* noise_peak_norm;
 
     double func(double x, int N) {
+        const double enf_sq = (enf * gain) * (enf * gain);
+
+        double mu = noise_mean;
+        double sigma_sq = (noise_width * gain) * (noise_width * gain);
         double sum = 0;
-        for (int i = 0; i < N; i++) {
-            const double n = (x - peaks[i]) / width;
-            sum += heights[i] * exp(-0.5 * n * n);
+        for (int n = 0; n < N; n++) {
+            sum += noise_peak_norm[n] * TMath::Gaus(x, mu, TMath::Sqrt(sigma_sq));
+            mu += gain;
+            sigma_sq += enf_sq;
         }
         return sum;
     }
@@ -70,12 +78,12 @@ void find_peaks(TH1D* hist) {
         // If derivative swaps sign, then we're at an extrema
         if (!extremum(find_max, hist->GetBinContent(i_window_ext), hist->GetBinContent(i_prev))) {
 
-            // if (find_max) {
-            //     std::cout << "max: bin " << i_prev << ", content: " << hist->GetBinContent(i_prev) << ", center: " << hist->GetBinCenter(i_prev) << "\n";
-            //     auto line = new TLine(hist->GetBinCenter(i_prev), 0, hist->GetBinCenter(i_prev), hist->GetBinContent(i_prev));
-            //     line->SetLineColor(find_max ? kBlue : kGreen);
-            //     line->Draw();
-            // }
+            if (find_max) {
+                std::cout << "max: bin " << i_prev << ", content: " << hist->GetBinContent(i_prev) << ", center: " << hist->GetBinCenter(i_prev) << "\n";
+                auto line = new TLine(hist->GetBinCenter(i_prev), 0, hist->GetBinCenter(i_prev), hist->GetBinContent(i_prev));
+                line->SetLineColor(find_max ? kBlue : kGreen);
+                line->Draw();
+            }
 
             if (find_max) peaks.push_back(hist->GetBinCenter(i_prev));
             else troughs.push_back(hist->GetBinCenter(i_prev));
@@ -113,9 +121,22 @@ void find_peaks(TH1D* hist) {
     HedgehogParams lower(lower_buffer.data(), N_peaks);
     HedgehogParams upper(upper_buffer.data(), N_peaks);
     
-    initial.width = 0.8;
-    lower.width = 0;
-    upper.width = 3;
+    initial.noise_width = 0.1;
+    lower.noise_width = 0;
+    upper.noise_width = 3;
+
+    initial.noise_mean = peaks.front();
+    lower.noise_mean = x_min;
+    upper.noise_mean = troughs.front();
+
+    initial.enf = 0.1;
+    lower.enf = 0;
+    upper.enf = 3;
+
+    initial.gain = average_peak_sep;
+    lower.gain = 0.5 * average_peak_sep;
+    upper.gain = 1.5 * average_peak_sep;
+
     for (int i = 0; i < N_peaks; i++) {
         // Initial guess of height by averaging over a 0.5 mV window
         int count = 0;
@@ -131,13 +152,13 @@ void find_peaks(TH1D* hist) {
         }
         height /= count;
 
-        initial.heights[i] = height;
-        lower.heights[i] = 0;
-        upper.heights[i] = hist->GetBinContent(center);
+        initial.noise_peak_norm[i] = height;
+        lower.noise_peak_norm[i] = 0;
+        upper.noise_peak_norm[i] = 1.1 * hist->GetBinContent(center);
 
-        initial.peaks[i] = peaks[i];
-        lower.peaks[i] = (i == 0) ? x_min : troughs[i-1];
-        upper.peaks[i] = (i == troughs.size()) ? x_max : troughs[i];
+        // initial.peaks[i] = peaks[i];
+        // lower.peaks[i] = (i == 0) ? x_min : troughs[i-1];
+        // upper.peaks[i] = (i == troughs.size()) ? x_max : troughs[i];
     }
 
     hedgehog->SetParameters(initial.to_array());
@@ -149,6 +170,12 @@ void find_peaks(TH1D* hist) {
 
     hedgehog->SetNpx(10000);
     hedgehog->Draw("same");
+
+    std::cout << "===== Hedgehog values:\n"
+        << "Noise Mean: " << initial.noise_mean << "\n"
+        << "Noise Width: " << initial.noise_width << "\n"
+        << "ENF: " << initial.enf << "\n"
+        << "Gain: " << initial.gain << "\n\n";
 
     // Change histogram plotting axis to see peaks better
     hist->GetXaxis()->SetRangeUser(peaks.front() - average_peak_sep, peaks.back() + 3 * average_peak_sep);
