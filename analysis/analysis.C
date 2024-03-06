@@ -7,7 +7,7 @@ constexpr unsigned int N_Channels = 8;
 constexpr unsigned int N_Samples = 1024;
 
 int binCalc(double x_min, double x_max, double vgain) {
-    int n = (int) ((x_max - x_min) / (vgain * 1000));
+    int n = (int) ((x_max - x_min) / (1000 * vgain / 0x1000));
     std::cout << "n bins: " << n << "\n";
     return n;
 }
@@ -30,8 +30,6 @@ class TreeReader {
 
         void get_entry(UInt_t i) {
             tree_->GetEntry(i);
-            // should change everything to just ns
-            horizontal_interval_ *= 1e9;
         }
 
         std::array<Double_t, N_Samples> time() const {
@@ -47,13 +45,14 @@ class TreeReader {
             const Double_t gain = vertical_gain_[channel];
             const Double_t offset = vertical_offset_[channel];
             for (int i = 0; i < N_Samples; i++) {
-                volts[i] = gain * 1000 * (static_cast<Double_t>(channels_[channel][i]) - offset);
+                volts[i] = gain * (static_cast<Double_t>(channels_[channel][i]) - offset);
             }
             return volts;
         }
 
         Float_t horizontal_interval() const { return horizontal_interval_; }
         Float_t vertical_gain(UInt_t channel) const { return vertical_gain_[channel]; }
+        Float_t vertical_offset(UInt_t channel) const { return vertical_offset_[channel]; }
 
         UInt_t get_bin(Double_t t) const {
             return static_cast<UInt_t>(t / horizontal_interval_);
@@ -65,7 +64,7 @@ class TreeReader {
 
         Float_t horizontal_interval_;
         std::array<Float_t, N_Channels> vertical_offset_, vertical_gain_;
-        std::array<std::array<Short_t, N_Samples>, N_Channels> channels_;
+        std::array<std::array<Float_t, N_Samples>, N_Channels> channels_;
 };
 
 void plot_samples(TreeReader& tree, int channel) {
