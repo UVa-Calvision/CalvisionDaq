@@ -58,6 +58,22 @@ public:
 
     void set_trigger(TriggerSettings t);
 
+
+    template <typename PredicateFunc>
+    void readout(const PredicateFunc& keep_running) {
+        begin_acquisition();
+
+        while (running() && keep_running(*this)) {
+            query_status();
+
+            if (ready()) {
+                read();
+            }
+        }
+
+        end_acquisition();
+    }
+
 private:
     int handle_; 
     CAEN_DGTZ_BoardInfo_t board_info_;

@@ -7,14 +7,15 @@ ROOT_LIBS=$(shell root-config --glibs) $(shell root-config --ldflags)
 all:
 	g++ $(CXX_FLAGS) $(ROOT_FLAGS) -o test main.cpp CaenEnums.cpp Digitizer.cpp BufferedFileIO.cpp X742_Data.cpp X742CorrectionRoutines.c X742DecodeRoutines.c $(INCLUDE_DIRS) $(LD_LIBS) $(ROOT_LIBS)
 
-thread_test:
-	g++ $(CXX_FLAGS) $(ROOT_FLAGS) -o thread_test test_main.cpp BufferedFileIO.cpp $(INCLUDE_DIRS) $(LD_LIBS) $(ROOT_LIBS)
-
 decode: decoder.cpp CaenEnums.cpp X742_Data.cpp
 	g++ $(CXX_FLAGS) $(ROOT_FLAGS) -o decode decoder.cpp CaenEnums.cpp X742_Data.cpp $(INCLUDE_DIRS) $(LD_LIBS) $(ROOT_LIBS)
 
 calibrate: calibrate.cpp Digitizer.cpp CaenEnums.cpp
 	g++ $(CXX_FLAGS) -o calibrate calibrate.cpp Digitizer.cpp CaenEnums.cpp $(INCLUDE_DIRS) $(LD_LIBS)
 
+direct_readout: direct_readout.cpp
+	g++ $(CXX_FLAGS) -o direct_readout direct_readout.cpp CaenEnums.cpp Digitizer.cpp BufferedFileIO.cpp X742_Data.cpp X742CorrectionRoutines.c X742DecodeRoutines.c $(INCLUDE_DIRS) $(LD_LIBS) $(ROOT_LIBS)
+
+
 clean:
-	rm -rf test file.root *.png thread_test decode calibrate *.dat
+	rm -rf test file.root *.png thread_test decode calibrate direct_readout *.dat

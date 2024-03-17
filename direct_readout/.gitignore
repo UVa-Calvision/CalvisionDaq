@@ -7,3 +7,4 @@ decode
 calibrate
 *.root
 file.root
+direct_readout

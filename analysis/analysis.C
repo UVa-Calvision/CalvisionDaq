@@ -186,4 +186,5 @@ void analysis(TString filename, int channel) {
     find_peaks(pid);
 
     canvas->Update();
+    canvas->SaveAs(TString::Format("peaks_%d.png", channel));
 }
