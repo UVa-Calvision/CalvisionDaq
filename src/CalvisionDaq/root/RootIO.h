@@ -1,15 +1,16 @@
 #pragma once
 
+#include "CalvisionDaq/digitizer/X742_Data.h"
+
 #include <TFile.h>
 #include <TTree.h>
-
-#include "X742_Data.h"
+#include <string>
 
 FloatingType adc_to_voltage(UIntType adc);
 
 class RootWriter {
 public:
-    RootWriter();
+    RootWriter(const std::string& filename);
 
     void setup(x742EventData& event);
 

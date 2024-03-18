@@ -4,9 +4,16 @@ function(make_CalvisionDaq_exec EXEC_NAME LINK_LIBS)
     foreach(LINK_LIB ${LINK_LIBS})
         target_link_libraries(${EXEC_NAME} PRIVATE ${LINK_LIB})
     endforeach()
+
+    install(TARGETS ${EXEC_NAME}
+        LIBRARY DESTINATION ${CalvisionDaq_INSTALL_LIB_DIR}
+        ARCHIVE DESTINATION ${CalvisionDaq_INSTALL_LIB_DIR}
+        RUNTIME DESTINATION ${CalvisionDaq_INSTALL_BIN_DIR}
+    )
 endfunction()
 
 
-make_CalvisionDaq_exec(decode "CalvisionDaqCommon;CalvisionDaqDigitizer;CalvisionDaqRoot")
+make_CalvisionDaq_exec(decoder "CalvisionDaqCommon;CalvisionDaqDigitizer;CalvisionDaqRoot")
 make_CalvisionDaq_exec(readout "CalvisionDaqCommon;CalvisionDaqDigitizer")
 make_CalvisionDaq_exec(calibrate "CalvisionDaqCommon;CalvisionDaqDigitizer")
+make_CalvisionDaq_exec(read_and_decode "CalvisionDaqCommon;CalvisionDaqDigitizer;CalvisionDaqRoot")

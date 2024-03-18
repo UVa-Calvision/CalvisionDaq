@@ -1,5 +1,7 @@
 #include "CaenError.h"
 
+#include "CaenEnums.h"
+
 #include <iostream>
 
 CaenError::CaenError(CAEN_DGTZ_ErrorCode code)

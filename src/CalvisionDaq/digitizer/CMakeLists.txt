@@ -1,4 +1,4 @@
-include("${CalvisionDaq}/cmake/FindCaenDigitzer.cmake")
+include("${CMAKE_SOURCE_DIR}/cmake/FindCaenDigitizer.cmake")
 
 set(LIBRARY_NAME "${PROJECT_NAME}Digitizer")
 

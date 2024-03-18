@@ -21,4 +21,5 @@ CAEN_ENUM_MAP(AcqMode);
 CAEN_ENUM_MAP(ZS_Mode);
 CAEN_ENUM_MAP(ThresholdWeight);
 // fast trigger mode documentation has wrong enum typedef?
-CAEN_ENUM_MAP(ErrorCode);
+
+std::string ErrorCode_to_string(CAEN_DGTZ_ErrorCode v);

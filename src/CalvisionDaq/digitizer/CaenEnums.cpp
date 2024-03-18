@@ -51,6 +51,15 @@
         } \
     }
 
+#define CAEN_ERROR_ENUM(name, postfix, n, ...) \
+    std::string name##_to_string(CAEN_DGTZ_##name v) { \
+        switch (v) { \
+            CAEN_ENUM_RECURSIVE_CASE(n, postfix, __VA_ARGS__) \
+            default: \
+                     return "UnrecognizedEnum"; \
+        } \
+    }
+
 CAEN_ENUM(BoardModel, , 7, DT5724, DT5721, DT5731, DT5720, DT5740, DT5751, DT5743);
 CAEN_ENUM(BoardFamilyCode, _FAMILY_CODE, 15, XX724, XX721, XX731, XX720, XX740, XX751, XX742, XX780, XX761, XX743, XX730, XX790, XX781, XX725, XX782);
 CAEN_ENUM(ReadMode, , 6, SLAVE_TERMINATED_READOUT_MBLT, SLAVE_TERMINATED_READOUT_2eVME, SLAVE_TERMINATED_READOUT_2eSST, POLLING_MBLT, POLLING_2eVME, POLLING_2eSST);
@@ -66,7 +75,7 @@ CAEN_ENUM(AcqMode, , 3, SW_CONTROLLED, S_IN_CONTROLLED, FIRST_TRG_CONTROLLED);
 CAEN_ENUM(ZS_Mode, , 4, ZS_NO, ZS_INT, ZS_ZLE, ZS_AMP);
 CAEN_ENUM(ThresholdWeight, , 2, ZS_FINE, ZS_COARSE);
 
-CAEN_ENUM(ErrorCode, , 35,
+CAEN_ERROR_ENUM(ErrorCode, , 35,
         Success, CommError, GenericError, InvalidParam, InvalidLinkType, InvalidHandle, MaxDevicesError,
         BadBoardType, BadInterruptLev, BadEventNumber, ReadDeviceRegisterFail, WriteDeviceRegisterFail,
         InvalidChannelNumber, ChannelBusy, FPIOModeInvalid, WrongAcqMode, FunctionNotAllowed, Timeout,

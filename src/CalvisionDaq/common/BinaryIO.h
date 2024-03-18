@@ -1,38 +1,53 @@
 #pragma once
 
 #include <fstream>
+#include <cstring>
 
 #include "Forward.h"
 
-/*
- * Binary file read
- */
-class BinaryInputFileStream {
+class BinaryInputStream {
 public:
-    BinaryInputFileStream(const std::string& filename)
-        : input(filename, std::fstream::in | std::fstream::binary)
-    {}
+    virtual ~BinaryInputStream() {}
 
     UIntType read_int() {
         static UIntType uint;
-        input.read((char*) &uint, sizeof(UIntType));
+        this->read_impl((char*) &uint, sizeof(UIntType));
         return uint;
     }
 
     template <typename T, size_t N>
     std::array<T,N> read() {
         std::array<T,N> buffer;
-        input.read((char*) buffer.data(), N * sizeof(T));
+        this->read_buffer(buffer);
         return buffer;
     }
 
     template <typename T, size_t N>
-    BinaryInputFileStream& read_buffer(std::array<T, N>& buffer) {
-        input.read((char*) buffer.data(), N * sizeof(T));
+    BinaryInputStream& read_buffer(std::array<T,N>& buffer) {
+        this->read_impl((char*) buffer.data(), sizeof(T) * N);
         return *this;
     }
 
-    bool good() const { return input.good(); }
+    virtual bool good() const = 0;
+
+    operator bool() const { return good(); }
+
+protected:
+    virtual void read_impl(char* buffer, size_t N) = 0;
+};
+
+/*
+ * Binary file read
+ */
+class BinaryInputFileStream : public BinaryInputStream {
+public:
+    explicit BinaryInputFileStream(const std::string& filename)
+        : input(filename, std::fstream::in | std::fstream::binary)
+    {}
+
+    virtual ~BinaryInputFileStream() {}
+
+    virtual bool good() const override { return input.good(); }
 
     template <typename FuncType>
     void follow(const FuncType& f) {
@@ -48,11 +63,36 @@ public:
     bool eof() const { return input.eof(); }
     void clear() { input.clear(); }
 
-    operator bool() const { return good(); }
+protected:
 
-private:
+    virtual void read_impl(char* buffer, size_t N) override {
+        input.read(buffer, N);
+    }
+
     std::ifstream input;
 };
+
+class BinaryInputBufferStream : public BinaryInputStream {
+public:
+    explicit BinaryInputBufferStream(const char* data, size_t N)
+        : ptr_(data), offset_(0), size_(N)
+    {}
+
+    virtual ~BinaryInputBufferStream() {}
+
+    virtual bool good() const override { return offset_ < size_; }
+
+protected:
+    virtual void read_impl(char* buffer, size_t N) override {
+        if (!good()) return;
+        std::memcpy((void*) buffer, (void*) (offset_ + ptr_), N);
+        offset_ += N;
+    }
+
+    const char* ptr_;
+    size_t offset_, size_;
+};
+
 
 /*
  * Binary file write

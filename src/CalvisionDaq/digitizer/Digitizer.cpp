@@ -202,13 +202,13 @@ void Digitizer::print() const {
     check(CAEN_DGTZ_GetIOLevel(handle_, &io_level));
     std::cout << "IO Level: " << IOLevel_to_string(io_level) << "\n";
 
-    for (int i = 0; i < N_Channels; i++) {
+    for (UIntType i = 0; i < N_Channels; i++) {
         CAEN_DGTZ_TriggerPolarity_t trigger_polarity;
         check(CAEN_DGTZ_GetTriggerPolarity(handle_, i, &trigger_polarity));
         std::cout << "Trigger polarity channel " << i << ": " << TriggerPolarity_to_string(trigger_polarity) << "\n";
     }
 
-    for (int i = 0; i < N_Groups; i++) {
+    for (UIntType i = 0; i < N_Groups; i++) {
         UIntType threshold;
         check(CAEN_DGTZ_GetGroupFastTriggerThreshold(handle_, i, &threshold));
         std::cout << "Group " << i << " fast trigger threshold: " << threshold << "\n";
@@ -251,7 +251,7 @@ void Digitizer::print() const {
     check(CAEN_DGTZ_GetAcquisitionMode(handle_, &acquisition_mode));
     std::cout << "Acquisition Mode: " << AcqMode_to_string(acquisition_mode) << "\n";
 
-    for (int i = 0; i < N_Channels; i++) {
+    for (UIntType i = 0; i < N_Channels; i++) {
         UIntType offset;
         check(CAEN_DGTZ_GetChannelDCOffset(handle_, i, &offset));
         float dc_offset = -voltage_p2p() * static_cast<float>(offset) / static_cast<float>(0xFFFF);
@@ -269,7 +269,7 @@ void Digitizer::print() const {
 }
 
 void Digitizer::set_channel_offsets(const ChannelArray<UIntType>& offsets) {
-    for (int c = 0; c < N_Channels; c++) {
+    for (UIntType c = 0; c < N_Channels; c++) {
         check(CAEN_DGTZ_SetChannelDCOffset(handle_, c, offsets[c]));
     }
 }
@@ -285,5 +285,5 @@ constexpr static std::array<UIntType, 7> trigger_dc_offsets = {
 constexpr static std::array<UIntType, 7> trigger_thresholds = {
         };
 
-void Digitizer::set_trigger(TriggerSettings t) {
+void Digitizer::set_trigger(TriggerSettings /* t */) {
 }

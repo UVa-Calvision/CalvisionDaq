@@ -5,12 +5,12 @@ FloatingType adc_to_voltage(UIntType adc) {
     return 1000.0 * (static_cast<FloatingType>(adc) - (adc_size / 2)) / adc_size;
 }
 
-RootWriter::RootWriter()
+RootWriter::RootWriter(const std::string& filename)
 {
-    file_ = TFile::Open("file.root", "RECREATE");
+    file_ = TFile::Open(filename.c_str(), "RECREATE");
     tree_ = new TTree("tree", "DRS Data");
 
-    for (int i = 0; i < N_Channels; i++) {
+    for (UIntType i = 0; i < N_Channels; i++) {
         vertical_gain_[i] = 1.0;
         vertical_offset_[i] = 0.0;
     }
@@ -38,10 +38,10 @@ void RootWriter::setup(x742EventData& event) {
 
 // this should be same event passed to setup!
 void RootWriter::handle_event(const x742EventData& event) {
-    for (int i = 0; i < N_Samples; i++) {
+    for (UIntType i = 0; i < N_Samples; i++) {
         time_[i] = i * event.group_data[0].sample_period;
 
-        for (int j = 0; j < N_Channels; j++) {
+        for (UIntType j = 0; j < N_Channels; j++) {
             channels_[j][i] = adc_to_voltage(event.group_data[0].channel_data[j][i]);
         }
     }

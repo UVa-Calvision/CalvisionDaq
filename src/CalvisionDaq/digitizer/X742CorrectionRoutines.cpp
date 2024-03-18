@@ -110,13 +110,11 @@ static void PeakCorrection(CAEN_DGTZ_X742_GROUP_t *dataout) {
 */
 void ApplyDataCorrection(CAEN_DGTZ_DRS4Correction_t* CTable, CAEN_DGTZ_DRS4Frequency_t frequency, int CorrectionLevelMask, CAEN_DGTZ_X742_GROUP_t *data) {
 
-    int i, j,rpnt = 0, wpnt = 0, size1, size2,trg = 0,k;
-    long samples;
+    int i, j, size1,trg = 0,k;
     float Time[1024],t0; 
     float Tsamp; 
 	float vcorr; 
     uint16_t st_ind=0; 
-    uint32_t freq = frequency;
     float wave_tmp[1024];
 	int cellCorrection =CorrectionLevelMask & 0x1;
 	int nsampleCorrection = (CorrectionLevelMask & 0x2) >> 1;
@@ -239,6 +237,8 @@ int SaveCorrectionTables(char *outputFileName, uint32_t groupMask, CAEN_DGTZ_DRS
         }
         fclose(outputfile);
     }
+
+    return 0;
 }
 
 /*! \brief   Reads the correction table of a x742 boards from txt files
@@ -251,9 +251,9 @@ int SaveCorrectionTables(char *outputFileName, uint32_t groupMask, CAEN_DGTZ_DRS
 */
 int LoadCorrectionTable(char *baseInputFileName, CAEN_DGTZ_DRS4Correction_t *tb) {
     char fnStr[MAX_BASE_INPUT_FILE_LENGTH + 1];
-    int ch, i, j, read;
+    int ch, i, j;
     FILE *inputfile;
-    char Buf[MAX_READ_CHAR + 1], *pread;
+    char Buf[MAX_READ_CHAR + 1];
 
     if(strlen(baseInputFileName) - 13 > MAX_BASE_INPUT_FILE_LENGTH)
         return -1; // Too long base filename
@@ -265,12 +265,12 @@ int LoadCorrectionTable(char *baseInputFileName, CAEN_DGTZ_DRS4Correction_t *tb)
         return -2;
     for(ch=0; ch<MAX_X742_CHANNEL_SIZE; ch++) {
         while(strstr(Buf, "Calibration") != Buf)
-            pread = fgets(Buf, MAX_READ_CHAR, inputfile);
+            fgets(Buf, MAX_READ_CHAR, inputfile);
         
         for(i=0; i<1024; i+=8) {
             for(j=0; j<8; j++)
-                read = fscanf(inputfile, "%hd", &(tb->cell[ch][i+j]));
-            pread = fgets(Buf, MAX_READ_CHAR, inputfile);
+                fscanf(inputfile, "%hd", &(tb->cell[ch][i+j]));
+            fgets(Buf, MAX_READ_CHAR, inputfile);
         }
     }
     fclose(inputfile);
@@ -282,12 +282,12 @@ int LoadCorrectionTable(char *baseInputFileName, CAEN_DGTZ_DRS4Correction_t *tb)
         return -3;
     for(ch=0; ch<MAX_X742_CHANNEL_SIZE; ch++) {
         while(strstr(Buf, "Calibration") != Buf)
-            pread = fgets(Buf, MAX_READ_CHAR, inputfile);
+            fgets(Buf, MAX_READ_CHAR, inputfile);
         
         for(i=0; i<1024; i+=8) {
             for(j=0; j<8; j++)
-                read = fscanf(inputfile, "%hhd", &(tb->nsample[ch][i+j]));
-            pread = fgets(Buf, MAX_READ_CHAR, inputfile);
+                fscanf(inputfile, "%hhd", &(tb->nsample[ch][i+j]));
+            fgets(Buf, MAX_READ_CHAR, inputfile);
         }
     }
     fclose(inputfile);
@@ -298,13 +298,13 @@ int LoadCorrectionTable(char *baseInputFileName, CAEN_DGTZ_DRS4Correction_t *tb)
     if((inputfile = fopen(fnStr, "r")) == NULL)
         return -4;
     while(strstr(Buf, "Calibration") != Buf)
-        pread = fgets(Buf, MAX_READ_CHAR, inputfile);
-    pread = fgets(Buf, MAX_READ_CHAR, inputfile);
+        fgets(Buf, MAX_READ_CHAR, inputfile);
+    fgets(Buf, MAX_READ_CHAR, inputfile);
         
     for(i=0; i<1024; i+=8) {
         for(j=0; j<8; j++)
-            read = fscanf(inputfile, "%f", &(tb->time[i+j]));
-        pread = fgets(Buf, MAX_READ_CHAR, inputfile);
+            fscanf(inputfile, "%f", &(tb->time[i+j]));
+        fgets(Buf, MAX_READ_CHAR, inputfile);
     }
     fclose(inputfile);
 

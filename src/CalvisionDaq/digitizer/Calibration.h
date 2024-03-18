@@ -4,7 +4,7 @@
 #include "CalvisionDaq/common/BinaryIO.h"
 #include "CaenEnums.h"
 #include "CaenError.h"
-#include "CalvisionDaq/common/NamingConvetions.h"
+#include "CalvisionDaq/common/NameConventions.h"
 
 /*
  * Calibration data for a single group.

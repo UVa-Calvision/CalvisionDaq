@@ -8,8 +8,9 @@
 class Decoder {
 public:
     Decoder();
-    
-    void read_event(BinaryInputFileStream& input);
+
+    void read_event(const char* data, UIntType count);
+    void read_event(BinaryInputStream& input);
     void apply_corrections();
 
     x742EventData& event();

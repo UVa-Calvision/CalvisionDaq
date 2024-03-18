@@ -33,7 +33,12 @@ Decoder::Decoder()
     }
 }
 
-void Decoder::read_event(BinaryInputFileStream& input) {
+void Decoder::read_event(const char* data, UIntType count) {
+    BinaryInputBufferStream buffer(data, count);
+    read_event(buffer);
+}
+
+void Decoder::read_event(BinaryInputStream& input) {
     // Static buffers
     static std::array<UIntType, 4> header;
     static std::array<UIntType, 3 * N_Samples> channels;
@@ -88,8 +93,6 @@ void Decoder::read_event(BinaryInputFileStream& input) {
             group_data.trigger_time = 8.5 * group_data.trigger_time_tag;
         }
     }
-
-    std::cout << "Read event: " << event_data_.event_counter << "\n";
 }
 
 void Decoder::apply_corrections() {

@@ -4,12 +4,12 @@ DRSGroupCalibration::DRSGroupCalibration()
 {}
 
 DRSGroupCalibration::DRSGroupCalibration(const CAEN_DGTZ_DRS4Correction_t& table) {
-    for (int i = 0; i < N_Samples; i++) {
+    for (UIntType i = 0; i < N_Samples; i++) {
         timing_[i] = table.time[i];
         trigger_offset_[i] = table.cell[N_Channels][i];
         trigger_sample_[i] = table.nsample[N_Channels][i];
 
-        for (int j = 0; j < N_Channels; j++) {
+        for (UIntType j = 0; j < N_Channels; j++) {
             channel_offset_[j][i] = table.cell[j][i];
             channel_sample_[j][i] = table.nsample[j][i];
         }
@@ -18,12 +18,12 @@ DRSGroupCalibration::DRSGroupCalibration(const CAEN_DGTZ_DRS4Correction_t& table
 
 CAEN_DGTZ_DRS4Correction_t DRSGroupCalibration::to_table() const {
     CAEN_DGTZ_DRS4Correction_t table;
-    for (int i = 0; i < N_Samples; i++) {
+    for (UIntType i = 0; i < N_Samples; i++) {
         table.time[i] = timing_[i];
         table.cell[N_Channels][i] = trigger_offset_[i];
         table.nsample[N_Channels][i] = trigger_sample_[i];
 
-        for (int j = 0; j < N_Channels; j++) {
+        for (UIntType j = 0; j < N_Channels; j++) {
             table.cell[j][i] = channel_offset_[j][i];
             table.nsample[j][i] = channel_sample_[j][i];
         }

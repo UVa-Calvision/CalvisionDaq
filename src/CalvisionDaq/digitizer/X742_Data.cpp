@@ -33,7 +33,7 @@ CAEN_DGTZ_ErrorCode decode(UIntType*& buffer, CAEN_DGTZ_X742_GROUP_t& group) {
         group.DataChannel[7][i]  =  (float) ((value & 0xFFF00000) >> 20);    /* S0[11:0] - CH7 */		
     }
 
-    for (int i = 0; i < N_Channels; i++) {
+    for (UIntType i = 0; i < N_Channels; i++) {
         group.ChSize[i] = N_Samples;
     }
 
@@ -162,8 +162,8 @@ void x742GroupData::PeakCorrection() {
 
 void x742GroupData::ApplyDataCorrection(CAEN_DGTZ_DRS4Correction_t* CTable, int CorrectionLevelMask)
 {
-    int i, j,rpnt = 0, wpnt = 0, size1, size2,trg = 0,k;
-    long samples;
+    unsigned int i, j;
+    int k;
     float Time[1024],t0; 
     float Tsamp; 
 	float vcorr; 
