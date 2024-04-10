@@ -25,7 +25,7 @@ void read_channels(const std::array<UIntType, 3 * N>& raw, const FuncType& targe
 
 Decoder::Decoder()
 {
-    calibration_tables_.read_all();
+    calibration_tables_.read_all(".");
     for (const auto freq : Frequencies) {
         for (UIntType g = 0; g < N_Groups; g++) {
             raw_tables_[static_cast<UIntType>(freq)][g] = calibration_tables_.table(freq, g).to_table();

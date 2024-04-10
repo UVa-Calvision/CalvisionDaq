@@ -2,7 +2,6 @@
 
 #include "CAENDigitizer.h"
 #include "X742_Data.h"
-#include "X742CorrectionRoutines.h"
 
 #include "CalvisionDaq/common/Forward.h"
 #include "CaenEnums.h"
@@ -30,12 +29,18 @@ class Digitizer {
 public:
     using CallbackFunc = std::function<void(const char* data, UIntType count)>;
 
-    Digitizer();
+    Digitizer(const std::string& config_file, std::ostream* log_out);
     ~Digitizer();
+
+    std::ostream& log() const {
+        return *log_;
+    }
+
+    void open(CAEN_DGTZ_ConnectionType link, UIntType device_id);
 
     void setup();
     void reset();
-    void write_calibration_tables();
+    void write_calibration_tables(const std::string& calibration_dir);
 
     void print() const;
 
@@ -73,6 +78,8 @@ public:
         end_acquisition();
     }
 
+    int handle() const { return handle_; }
+
 private:
     int handle_; 
     CAEN_DGTZ_BoardInfo_t board_info_;
@@ -80,7 +87,6 @@ private:
     char* readout_buffer_;
     UIntType readout_size_;
 
-    CAEN_DGTZ_DRS4Frequency_t frequency_;
     GroupArray<CAEN_DGTZ_DRS4Correction_t> correction_table_;
 
 
@@ -89,4 +95,6 @@ private:
     // Acquisition statuses
     bool running_, ready_, buffer_full_;
     UIntType num_events_read_;
+
+    std::ostream* log_;
 };

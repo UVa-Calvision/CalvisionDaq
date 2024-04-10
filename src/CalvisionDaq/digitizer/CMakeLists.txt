@@ -10,6 +10,8 @@ target_link_libraries(${LIBRARY_NAME} PUBLIC
     CAENDigitizer
     CAENVME
     usb-1.0
+    CppUtils::CppUtilsCUtils
+    BLAS::BLAS
 )
 
 install_CalvisionDaq_library(${LIBRARY_NAME} digitizer)

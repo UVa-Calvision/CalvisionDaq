@@ -60,21 +60,6 @@
         } \
     }
 
-CAEN_ENUM(BoardModel, , 7, DT5724, DT5721, DT5731, DT5720, DT5740, DT5751, DT5743);
-CAEN_ENUM(BoardFamilyCode, _FAMILY_CODE, 15, XX724, XX721, XX731, XX720, XX740, XX751, XX742, XX780, XX761, XX743, XX730, XX790, XX781, XX725, XX782);
-CAEN_ENUM(ReadMode, , 6, SLAVE_TERMINATED_READOUT_MBLT, SLAVE_TERMINATED_READOUT_2eVME, SLAVE_TERMINATED_READOUT_2eSST, POLLING_MBLT, POLLING_2eVME, POLLING_2eSST);
-CAEN_ENUM(DRS4Frequency, , 4, DRS4_5GHz, DRS4_2_5GHz, DRS4_1GHz, DRS4_750MHz);
-CAEN_ENUM(TriggerMode, , 4, TRGMODE_DISABLED, TRGMODE_EXTOUT_ONLY, TRGMODE_ACQ_ONLY, TRGMODE_ACQ_AND_EXTOUT);
-CAEN_ENUM(RunSyncMode, , 5, RUN_SYNC_Disabled, RUN_SYNC_TrgOutTrgInDaisyChain, RUN_SYNC_TrgOutSinDaisyChain, RUN_SYNC_SinFanout, RUN_SYNC_GpioGpioDaisyChain);
-CAEN_ENUM(IOLevel, , 2, IOLevel_NIM, IOLevel_TTL);
-CAEN_ENUM(TriggerPolarity, , 2, TriggerOnRisingEdge, TriggerOnFallingEdge);
-CAEN_ENUM(EnaDis, , 2, ENABLE, DISABLE);
-// fast trigger mode documentation has wrong enum typedef?
-CAEN_ENUM(OutputSignalMode, , 4, TRIGGER, FASTTRG_ALL, FASTTRG_ACCEPTED, BUSY);
-CAEN_ENUM(AcqMode, , 3, SW_CONTROLLED, S_IN_CONTROLLED, FIRST_TRG_CONTROLLED);
-CAEN_ENUM(ZS_Mode, , 4, ZS_NO, ZS_INT, ZS_ZLE, ZS_AMP);
-CAEN_ENUM(ThresholdWeight, , 2, ZS_FINE, ZS_COARSE);
-
 CAEN_ERROR_ENUM(ErrorCode, , 35,
         Success, CommError, GenericError, InvalidParam, InvalidLinkType, InvalidHandle, MaxDevicesError,
         BadBoardType, BadInterruptLev, BadEventNumber, ReadDeviceRegisterFail, WriteDeviceRegisterFail,

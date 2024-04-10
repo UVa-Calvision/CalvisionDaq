@@ -17,3 +17,5 @@ make_CalvisionDaq_exec(decoder "CalvisionDaqCommon;CalvisionDaqDigitizer;Calvisi
 make_CalvisionDaq_exec(readout "CalvisionDaqCommon;CalvisionDaqDigitizer")
 make_CalvisionDaq_exec(calibrate "CalvisionDaqCommon;CalvisionDaqDigitizer")
 make_CalvisionDaq_exec(read_and_decode "CalvisionDaqCommon;CalvisionDaqDigitizer;CalvisionDaqRoot")
+make_CalvisionDaq_exec(dual_readout "CalvisionDaqCommon;CalvisionDaqDigitizer;CalvisionDaqRoot")
+make_CalvisionDaq_exec(reset_digitizer "CalvisionDaqCommon;CalvisionDaqDigitizer")

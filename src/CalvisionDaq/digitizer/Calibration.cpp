@@ -1,4 +1,5 @@
 #include "Calibration.h"
+#include "X742_Data.h"
 
 DRSGroupCalibration::DRSGroupCalibration()
 {}
@@ -59,33 +60,82 @@ void DRSGroupCalibration::write(BinaryOutputFileStream& outfile) const {
     outfile.write_buffer(timing_);
 }
 
+// namespace cblas {
+// 
+// void sample_axpy(FloatingType alpha, const SampleArray<FloatingType>& x, SampleArray<FloatingType>& y) {
+//     cblas_saxpy(N_Samples, alpha, x.data(), 1, y.data(), 1);
+// }
+// 
+// void sample_wrap_axpy(FloatingType alpha,
+//                       const SampleArray<FloatingType>& x,
+//                       SampleArray<FloatingType>& y,
+//                       UIntType start)
+// {
+//     cblas_saxpy(N_Samples - start, alpha, x.data() + start, 1, y.data(), 1);
+//     cblas_saxpy(start, alpha, x.data(), 1, y.data() + (N_Samples - start), 1);
+// }
+// 
+// 
+// 
+// }
+// 
+// 
+// 
+// void DRSGroupCalibration::apply(x742GroupData& data) const {
+//     for (UIntType i = 0; i < N_Channels; i++) {
+//         SampleArray<FloatingType>& channel_data = data.channel_data[i];
+// 
+//         cblas::sample_wrap_axpy(-1.0, channel_offset_[i], channel_data, data.start_index_cell);
+//         cblas::sample_axpy(-1.0, channel_sample_[i], channel_data);
+//     }
+// 
+//     if (trigger_digitized) {
+//         cblas::sample_wrap_axpy(-1.0, trigger_offset_, data.trigger_data, data.start_index_cell);
+//         cblas::sample_axpy(-1.0, trigger_sample_, data.trigger_data);
+//     }
+// 
+//     // peak correction
+// 
+//     SampleArray<FloatingType> time;
+//     zero_buffer<N_Samples>(time.data());
+// 
+//     set_buffer(time.data(), N_Samples - data.start_index_cell, 0);
+//     set_buffer(time.data() + N_Samples - data.start_index_cell, data.start_index_cell, data.sample_period * N_Samples);
+//     
+//     cblas::sample_wrap_axpy(1.0, timing_, time, data.start_index_cell);
+// 
+//     for (UIntType i = 0; i < N_Channels; i++) {
+//         
+//     }
+// }
+
 
 
 
 CalibrationTables::CalibrationTables()
 {}
 
-void CalibrationTables::read_all() {
+void CalibrationTables::read_all(const std::string& calibration_dir) {
     for (const auto freq : Frequencies) {
-        read(freq);
+        read(calibration_dir, freq);
     }
 }
 
-void CalibrationTables::write_all() const {
+void CalibrationTables::write_all(const std::string& calibration_dir) const {
     for (const auto freq : Frequencies) {
-        write(freq);
+        write(calibration_dir, freq);
     }
 }
 
-void CalibrationTables::read(CAEN_DGTZ_DRS4Frequency_t frequency) {
-    BinaryInputFileStream in(CalibrationTables::filename(frequency));
+void CalibrationTables::read(const std::string& calibration_dir, CAEN_DGTZ_DRS4Frequency_t frequency) {
+    BinaryInputFileStream in(CalibrationTables::filename(calibration_dir, frequency));
     for (auto&& group : tables_[static_cast<UIntType>(frequency)]) {
         group.read(in);
     }
 }
 
-void CalibrationTables::write(CAEN_DGTZ_DRS4Frequency_t frequency) const {
-    BinaryOutputFileStream out(CalibrationTables::filename(frequency));
+void CalibrationTables::write(const std::string& calibration_dir, CAEN_DGTZ_DRS4Frequency_t frequency) const {
+    BinaryOutputFileStream out(CalibrationTables::filename(calibration_dir, frequency));
     for (const auto& group : tables_[static_cast<UIntType>(frequency)]) {
         group.write(out);
     }
@@ -109,7 +159,14 @@ DRSGroupCalibration& CalibrationTables::table(CAEN_DGTZ_DRS4Frequency_t frequenc
     return tables_[static_cast<UIntType>(frequency)][group];
 }
 
-std::string CalibrationTables::filename(CAEN_DGTZ_DRS4Frequency_t frequency) {
-    return "calibration_" + DRS4Frequency_to_string(frequency) + ".dat";
+std::string CalibrationTables::filename(const std::string& calibration_dir, CAEN_DGTZ_DRS4Frequency_t frequency) {
+    return calibration_dir + "/calibration_" + std::string(*DRS4FrequencyTable.get<CaenEnumValue::Name>(frequency)) + ".dat";
 }
 
+// void CalibrationTables::apply(x742EventData& data) const {
+//     for (UIntType g = 0; g < N_Groups; g++) {
+//         if (data.group_present[g]) {
+//             tables_[data.group_data[g].frequency][g].apply(data.group_data[g]);
+//         }
+//     }
+// }

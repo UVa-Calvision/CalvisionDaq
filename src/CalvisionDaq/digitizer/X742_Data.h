@@ -4,8 +4,8 @@
 #include "CalvisionDaq/common/Forward.h"
 #include "CalvisionDaq/common/Bitmanip.h"
 
-CAEN_DGTZ_ErrorCode decode(UIntType*& buffer, CAEN_DGTZ_X742_GROUP_t& group);
-CAEN_DGTZ_ErrorCode decode(UIntType* buffer, CAEN_DGTZ_X742_EVENT_t& event);
+// CAEN_DGTZ_ErrorCode decode(UIntType*& buffer, CAEN_DGTZ_X742_GROUP_t& group);
+// CAEN_DGTZ_ErrorCode decode(UIntType* buffer, CAEN_DGTZ_X742_EVENT_t& event);
 
 static constexpr std::array<FloatingType, 4> sampling_period = {
     1.0 / 5.0,
