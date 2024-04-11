@@ -22,7 +22,6 @@ template <typename EnumType, size_t N>
 using CaenEnumIndexer = typename detail::CaenEnumIndexerHelper<EnumType, std::make_index_sequence<N>>::type;
 
 using BoardModelIndexer         = CaenEnumIndexer<CAEN_DGTZ_BoardModel_t        , 43>;
-// using BoardFamilyCodeIndexer    = CaenEnumIndexer<CAEN_DGTZ_BoardFamilyCode_t   , 17>;
 using TriggerModeIndexer        = CaenEnumIndexer<CAEN_DGTZ_TriggerMode_t       , 4>;
 using ReadModeIndexer           = CaenEnumIndexer<CAEN_DGTZ_ReadMode_t          , 6>;
 using DRS4FrequencyIndexer      = CaenEnumIndexer<CAEN_DGTZ_DRS4Frequency_t     , 4>;
@@ -35,6 +34,25 @@ using ZS_ModeIndexer            = CaenEnumIndexer<CAEN_DGTZ_ZS_Mode_t           
 using ThresholdWeightIndexer    = CaenEnumIndexer<CAEN_DGTZ_ThresholdWeight_t   , 2>;
 using TriggerPolarityIndexer    = CaenEnumIndexer<CAEN_DGTZ_TriggerPolarity_t   , 2>;
 using ConnectionTypeIndexer     = CaenEnumIndexer<CAEN_DGTZ_ConnectionType      , 8>;
+
+using BoardFamilyCodeIndexer = EnumIndexer<CAEN_DGTZ_BoardFamilyCode_t,
+    CAEN_DGTZ_XX724_FAMILY_CODE,
+    CAEN_DGTZ_XX721_FAMILY_CODE,
+    CAEN_DGTZ_XX731_FAMILY_CODE,
+    CAEN_DGTZ_XX720_FAMILY_CODE,
+    CAEN_DGTZ_XX740_FAMILY_CODE,
+    CAEN_DGTZ_XX751_FAMILY_CODE,
+    CAEN_DGTZ_XX742_FAMILY_CODE, 
+    CAEN_DGTZ_XX780_FAMILY_CODE,
+    CAEN_DGTZ_XX761_FAMILY_CODE,
+    CAEN_DGTZ_XX743_FAMILY_CODE,
+    CAEN_DGTZ_XX730_FAMILY_CODE,
+    CAEN_DGTZ_XX790_FAMILY_CODE,
+    CAEN_DGTZ_XX781_FAMILY_CODE,
+    CAEN_DGTZ_XX725_FAMILY_CODE,
+	CAEN_DGTZ_XX782_FAMILY_CODE
+>;
+
 
 using ErrorCodeIndexer = EnumIndexer<CAEN_DGTZ_ErrorCode,
     CAEN_DGTZ_Success                       ,
@@ -131,6 +149,24 @@ constexpr static auto BoardModelTable = CaenEnumTable<BoardModelIndexer>::make_t
     CAEN_ENUM_ENTRY(N6725 ),
     CAEN_ENUM_ENTRY(V1725 ),
 	CAEN_ENUM_ENTRY(V1782 )
+);
+
+constexpr static auto BoardFamilyCodeTable = CaenEnumTable<BoardFamilyCodeIndexer>::make_table(
+    CAEN_ENUM_ENTRY(XX724_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX721_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX731_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX720_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX740_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX751_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX742_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX780_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX761_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX743_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX730_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX790_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX781_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX725_FAMILY_CODE),
+    CAEN_ENUM_ENTRY(XX782_FAMILY_CODE)
 );
 
 constexpr static auto TriggerModeTable      = CaenEnumTable<TriggerModeIndexer      >::make_table(

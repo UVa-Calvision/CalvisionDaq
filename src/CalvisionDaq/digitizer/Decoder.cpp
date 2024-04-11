@@ -26,7 +26,7 @@ void read_channels(const std::array<UIntType, 3 * N>& raw, const FuncType& targe
 Decoder::Decoder()
 {
     calibration_tables_.read_all(".");
-    for (const auto freq : Frequencies) {
+    for (const auto freq : DRS4FrequencyIndexer::values) {
         for (UIntType g = 0; g < N_Groups; g++) {
             raw_tables_[static_cast<UIntType>(freq)][g] = calibration_tables_.table(freq, g).to_table();
         }
@@ -39,10 +39,10 @@ void Decoder::read_event(const char* data, UIntType count) {
 }
 
 void Decoder::read_event(BinaryInputStream& input) {
-    // Static buffers
-    static std::array<UIntType, 4> header;
-    static std::array<UIntType, 3 * N_Samples> channels;
-    static std::array<UIntType, 3 * N_Chunks> trigger;
+    // Buffers - can't be static if multithreaded
+    std::array<UIntType, 4> header;
+    std::array<UIntType, 3 * N_Samples> channels;
+    std::array<UIntType, 3 * N_Chunks> trigger;
 
     // Event header
     if (!input.read_buffer(header)) return;
@@ -70,7 +70,7 @@ void Decoder::read_event(BinaryInputStream& input) {
                      size)
                 = bmp::read<2,10,2,2,3,1,12>(input.read_int());
             group_data.trigger_digitized = (TR == 1);
-            group_data.sample_period = sampling_period[group_data.frequency];
+            group_data.sample_period = *FrequencyTable.get<FrequencyValue::SamplingPeriod>(static_cast<CAEN_DGTZ_DRS4Frequency_t>(group_data.frequency));
 
             // TODO: check size == 3 * N_Samples
 

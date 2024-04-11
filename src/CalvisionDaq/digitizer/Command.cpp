@@ -20,7 +20,8 @@ constexpr static auto CommonCommandTable = CommandTableType<CommonCommandIndexer
     std::pair(CommonCommand::Frequency,             std::tuple("DRS4_FREQUENCY"                     )),
     std::pair(CommonCommand::FPIOLevel,             std::tuple("FPIO_LEVEL"                         )),
     std::pair(CommonCommand::EnableInput,           std::tuple("ENABLE_INPUT"                       )),
-    std::pair(CommonCommand::DigitizeFastTrigger,   std::tuple("ENABLED_FAST_TRIGGER_DIGITIZING"    ))
+    std::pair(CommonCommand::DigitizeFastTrigger,   std::tuple("ENABLED_FAST_TRIGGER_DIGITIZING"    )),
+    std::pair(CommonCommand::MaxNumEventsBLT,       std::tuple("MAX_NUM_EVENTS_BLT"                 ))
 );
 
 constexpr static auto GroupCommandTable = CommandTableType<GroupCommandIndexer>::make_table(
@@ -198,6 +199,10 @@ void run_common(Digitizer& digi, const std::vector<std::string>& tokens) {
             const auto& [enadis] = parse_arguments<CAEN_DGTZ_EnaDis_t>(tokens, 1);
             check(CAEN_DGTZ_SetFastTriggerDigitizing(digi.handle(), enadis));
             } break;
+        case CommonCommand::MaxNumEventsBLT: {
+            const auto& [n] = parse_arguments<UIntType>(tokens, 1);
+            check(CAEN_DGTZ_SetMaxNumEventsBLT(digi.handle(), n));
+            } break;
     }
 }
 
@@ -258,6 +263,7 @@ void run_setup(std::istream& input, Digitizer& digi) {
 
     std::string line;
     while (std::getline(input, line)) {
+        std::cout << "Reading line: " << line << "\n";
         std::vector<std::string> tokens = tokenize(line);
         if (tokens.empty()) {
             continue;

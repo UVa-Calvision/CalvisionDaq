@@ -20,7 +20,8 @@ INDEXED_ENUM(CommonCommand,
     Frequency,
     FPIOLevel,
     EnableInput,
-    DigitizeFastTrigger
+    DigitizeFastTrigger,
+    MaxNumEventsBLT
 );
 
 INDEXED_ENUM(GroupCommand,

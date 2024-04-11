@@ -5,6 +5,7 @@
 #include "CaenEnums.h"
 #include "CaenError.h"
 #include "CalvisionDaq/common/NameConventions.h"
+#include "Frequency.h"
 
 class x742GroupData;
 class x742EventData;
@@ -34,16 +35,6 @@ private:
     SampleArray<FloatingType> timing_;
 };
 
-
-template <typename T>
-using FrequencyArray = std::array<T, _CAEN_DGTZ_DRS4_COUNT_>;
-
-constexpr static FrequencyArray<CAEN_DGTZ_DRS4Frequency_t> Frequencies = {
-        CAEN_DGTZ_DRS4_5GHz,
-        CAEN_DGTZ_DRS4_2_5GHz,
-        CAEN_DGTZ_DRS4_1GHz,
-        CAEN_DGTZ_DRS4_750MHz
-    };
 
 /*
  * Total calibration data for all groups and frequencies

@@ -67,12 +67,25 @@ public:
     void readout(const PredicateFunc& keep_running) {
         begin_acquisition();
 
-        while (running() && keep_running(*this)) {
-            query_status();
+        auto start = std::chrono::high_resolution_clock::now();
 
-            if (ready()) {
-                read();
-            }
+        while (/*running() &&*/ keep_running(*this)) {
+
+            auto intermediate = std::chrono::high_resolution_clock::now();
+
+            read();
+
+            auto finish = std::chrono::high_resolution_clock::now();
+            auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(finish - start);
+            log() << "Keep running time: " << std::chrono::duration_cast<std::chrono::microseconds>(intermediate - start).count() << " us\n";
+            log() << "Read time: " << std::chrono::duration_cast<std::chrono::microseconds>(finish - intermediate).count() << " us\n";
+            start = std::chrono::high_resolution_clock::now();
+
+            // query_status();
+
+            // if (ready()) {
+            //     read();
+            // }
         }
 
         end_acquisition();

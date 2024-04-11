@@ -6,6 +6,8 @@
 
 #include <cstring>
 #include <thread>
+#include <condition_variable>
+#include <mutex>
 
 using BufferedType = UIntType;
 
@@ -60,6 +62,9 @@ private:
     BinaryOutputFileStream outfile_;
 
     volatile bool finished_;
+
+    std::mutex swap_mutex, done_mutex;
+    std::condition_variable cleared_intermediate, ready_to_save;
 };
 
 

@@ -116,13 +116,13 @@ CalibrationTables::CalibrationTables()
 {}
 
 void CalibrationTables::read_all(const std::string& calibration_dir) {
-    for (const auto freq : Frequencies) {
+    for (const auto freq : DRS4FrequencyIndexer::values) {
         read(calibration_dir, freq);
     }
 }
 
 void CalibrationTables::write_all(const std::string& calibration_dir) const {
-    for (const auto freq : Frequencies) {
+    for (const auto freq : DRS4FrequencyIndexer::values) {
         write(calibration_dir, freq);
     }
 }
@@ -143,7 +143,7 @@ void CalibrationTables::write(const std::string& calibration_dir, CAEN_DGTZ_DRS4
 
 void CalibrationTables::load_from_digitizer(int handle) {
     GroupArray<CAEN_DGTZ_DRS4Correction_t> correction_table;
-    for (const auto frequency : Frequencies) {
+    for (const auto frequency : DRS4FrequencyIndexer::values) {
         check(CAEN_DGTZ_GetCorrectionTables(handle, frequency, correction_table.data()));
         for (UIntType g = 0; g < N_Groups; g++) {
             table(frequency, g) = DRSGroupCalibration(correction_table[g]);

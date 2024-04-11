@@ -10,7 +10,7 @@ public:
     virtual ~BinaryInputStream() {}
 
     UIntType read_int() {
-        static UIntType uint;
+        UIntType uint;
         this->read_impl((char*) &uint, sizeof(UIntType));
         return uint;
     }

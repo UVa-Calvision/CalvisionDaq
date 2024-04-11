@@ -53,8 +53,12 @@ Digitizer::Digitizer(const std::string& config_file, std::ostream* out_log)
 }
 
 void Digitizer::open(CAEN_DGTZ_ConnectionType link_type, UIntType device_id) {
+    std::cout << "Attempting to open with link type " << static_cast<unsigned long>(link_type) << "\n"
+        << "\tand device id " << device_id << "\n";
     check(CAEN_DGTZ_OpenDigitizer(link_type, device_id, 0, 0, &handle_));
+    std::cout << "open returned with handle " << handle_ << "\n";
     check(CAEN_DGTZ_GetInfo(handle_, &board_info_));
+    std::cout << "retrieved the board info\n";
 }
 
 Digitizer::~Digitizer()
@@ -130,7 +134,7 @@ void Digitizer::write_calibration_tables(const std::string& calibration_dir) {
     CalibrationTables tables;
     tables.load_from_digitizer(handle_);
 
-    for (const auto freq : Frequencies) {
+    for (const auto freq : DRS4FrequencyIndexer::values) {
         tables.write(calibration_dir, freq);
     }
 }
@@ -141,16 +145,25 @@ void Digitizer::end_acquisition() {
     log() << "Acquisition stopped.\n";
 }
 
+auto time_in_ns() {
+    using namespace std::chrono;
+    return duration_cast<nanoseconds>(high_resolution_clock::now().time_since_epoch());
+}
+
 void Digitizer::read() {
 
+    log() << "ReadDataStart: " << time_in_ns() << "\n";
     check(CAEN_DGTZ_ReadData(handle_,
                              CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                              readout_buffer_,
                              &readout_size_));
+    log() << "ReadDataStop : " << time_in_ns() << "\n";
+
     event_callback_(readout_buffer_, readout_size_);
     
     UIntType num_events = 0;
     check(CAEN_DGTZ_GetNumEvents(handle_, readout_buffer_, readout_size_, &num_events));
+    log() << "Num events: " << num_events << "\n";
     num_events_read_ += num_events;
 }
 
@@ -175,12 +188,16 @@ void Digitizer::set_event_callback(const CallbackFunc& event_callback) {
 }
 
 void Digitizer::print() const {
+    std::cout << "Print command\n";
+
     // Board info
     log() << " ----- Board Info:\n"
               << "Model Name: " << board_info_.ModelName << "\n"
               << "Model: " << *BoardModelTable.get<CaenEnumValue::Name>(static_cast<CAEN_DGTZ_BoardModel_t>(board_info_.Model)) << "\n"
+              << "Family Code: " << *BoardFamilyCodeTable.get<CaenEnumValue::Name>(static_cast<CAEN_DGTZ_BoardFamilyCode_t>(board_info_.FamilyCode)) << "\n"
               // << "Family Code: " << BoardFamilyCode_to_string(static_cast<CAEN_DGTZ_BoardFamilyCode_t>(board_info_.FamilyCode)) << "\n"
               << "Channels: " << board_info_.Channels << "\n"
+              << "Serial Number: " << board_info_.SerialNumber << "\n"
               << "\n";
 
 

@@ -1,9 +1,7 @@
 #include "BufferedFileIO.h"
 
-#include <mutex>
 #include <iostream>
 #include <chrono>
-#include <condition_variable>
 
 using namespace std::chrono_literals;
 
@@ -46,8 +44,8 @@ bool DataBuffer::full() const {
 
 // ===== BufferedFileWriter
 
-std::mutex swap_mutex, done_mutex;
-std::condition_variable cleared_intermediate, ready_to_save;
+// std::mutex swap_mutex, done_mutex;
+// std::condition_variable cleared_intermediate, ready_to_save;
 
 BufferedFileWriter::BufferedFileWriter(const std::string& filename)
     : input_buffer_(&buffer_1_),

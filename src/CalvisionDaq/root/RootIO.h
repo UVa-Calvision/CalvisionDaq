@@ -24,7 +24,9 @@ private:
     TFile* file_;
 
     Float_t vertical_gain_[N_Channels], vertical_offset_[N_Channels];
-    Double_t horizontal_offset_, trigger_offset_, time_[N_Samples];
+    Float_t horizontal_offset_, trigger_offset_, time_[N_Samples];
     Int_t samples_;
     Float_t channels_[N_Channels][N_Samples];
+
+
 };
