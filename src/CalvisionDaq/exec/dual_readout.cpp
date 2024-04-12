@@ -2,6 +2,13 @@
 #include "CalvisionDaq/digitizer/Digitizer.h"
 #include "CalvisionDaq/digitizer/CaenError.h"
 #include "CalvisionDaq/digitizer/Command.h"
+#include "CalvisionDaq/common/BinaryIO.h"
+#include "CalvisionDaq/digitizer/Decoder.h"
+#include "CalvisionDaq/root/RootIO.h"
+#include "CalvisionDaq/common/Stopwatch.h"
+#include "CalvisionDaq/common/MemoryPool.h"
+
+#include "CppUtils/c_util/CUtil.h"
 
 #include <iostream>
 #include <fstream>
@@ -13,37 +20,101 @@ bool stop_readout(const Digitizer&) {
     return !quit_readout;
 }
 
-void main_loop(size_t thread_id, Digitizer* digi, std::ostream* log_out) {
+using PoolType = MemoryPool<Digitizer::max_event_size()>;
+using QueueType = SPSCQueue<typename PoolType::BlockType, 2048>;
+
+
+class DigiContext {
+public:
+
+    DigiContext(size_t n, const std::string& config_file)
+        // : root_io_("decoded_outfile_" + std::to_string(n) + ".root")
+    {
+        log_out_ = std::make_unique<std::ofstream>("readout_" + std::to_string(n) + ".log");
+        digi_ = std::make_unique<Digitizer>(config_file, &std::cout /*log_out_.get()*/);
+        
+        pool_ = std::make_unique<PoolType>(1024);
+        queue_ = std::make_unique<QueueType>();
+
+        digi_->print();
+        digi_->set_event_callback([this] (const char* data, UIntType count) {
+                const size_t event_size = digi().event_size();
+                size_t num_events = count / event_size;
+                auto blocks = this->pool().allocate(num_events);
+                for (auto* block : blocks) {
+                    copy_raw_buffer<uint8_t, char>(block->block().data(), data, event_size);
+                    this->queue().add(block);
+                    data += event_size;
+                }
+            });
+    }
+
+    ~DigiContext()
+    {
+        pool_.reset();
+        queue_.reset();
+
+        digi_.reset();
+        log_out_.reset();
+    }
+
+    Digitizer& digi() { return *digi_; }
+    // std::ostream& log() { return *log_out_; }
+    std::ostream& log() { return std::cout; }
+    QueueType& queue() { return *queue_; }
+    PoolType& pool() { return *pool_; }
+
+private:
+    std::unique_ptr<Digitizer> digi_;
+    std::unique_ptr<std::ostream> log_out_;
+    std::unique_ptr<QueueType> queue_;
+    std::unique_ptr<PoolType> pool_;
+};
+
+
+
+void decode_loop(size_t thread_id, DigiContext& ctx) {
+    Decoder decoder;
+    RootWriter root_io("decoded_outfile_" + std::to_string(thread_id) + ".root");
+    root_io.setup(decoder.event());
+
+    while (auto block = ctx.queue().pop()) {
+        BinaryInputBufferStream input((const char*) block->block().data(), ctx.digi().event_size());
+        decoder.read_event(input);
+        decoder.apply_corrections();
+        root_io.handle_event(decoder.event());
+        ctx.pool().deallocate(block);
+    }
+
+    root_io.write();
+}
+
+void main_loop(size_t thread_id, DigiContext& ctx) {
 
     try {
-        digi->print();
+        std::thread decode_thread(&decode_loop, thread_id, std::ref(ctx));
 
-        *log_out << "Opening buffered file writer\n";
-        BufferedFileWriter buffered_io("outfile_" + std::to_string(thread_id) + ".dat");
-        digi->set_event_callback([&buffered_io] (const char* data, UIntType count) {
-                buffered_io.write((const BufferedType*) data, count * sizeof(char) / sizeof(BufferedType));
-            });
-
-        *log_out << "Beginning readout\n";
-        digi->readout([](const Digitizer& d) {
-                d.log() << "Read " << d.num_events_read() << "\n";
+        ctx.log() << "Beginning readout\n";
+        ctx.digi().readout([](const Digitizer& d) {
+                std::cout << "Read " << d.num_events_read() << "\n";
                 return !quit_readout;
             });
 
-        *log_out << "Stopped readout\n";
 
-        *log_out << "Writing file...\n";
-        buffered_io.close();
+        ctx.log() << "Stopped readout\n";
 
-        *log_out << "Resetting digitzer...\n";
-        digi->reset();
+        ctx.queue().close();
+        decode_thread.join();
 
-        *log_out << "Done.\n";
+        ctx.log() << "Resetting digitzer...\n";
+        ctx.digi().reset();
+
+        ctx.log() << "Done.\n";
 
     } catch (const CaenError& error) {
         std::cerr << "[FATAL ERROR]: ";
         error.print_error(std::cerr);
-        error.print_error(*log_out);
+        error.print_error(ctx.log());
     }
 }
 
@@ -61,6 +132,11 @@ void interrupt_listener() {
 
 constexpr static size_t N_DIGITIZERS = 2;
 
+constexpr static size_t HV_SERIAL_NUMBER = 29622;
+constexpr static size_t LV_SERIAL_NUMBER = 21333;
+
+#include <TROOT.h>
+
 int main(int argc, char** argv) {
 
     if (argc != 1 + N_DIGITIZERS) {
@@ -74,14 +150,17 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    std::vector<std::thread> main_threads;
-    std::vector<std::unique_ptr<Digitizer> > digis;
-    std::vector<std::unique_ptr<std::ostream> > logs;
-    for (size_t i = 1; i <= N_DIGITIZERS; i++) {
-        logs.push_back(std::make_unique<std::ofstream>("readout_" + std::to_string(i) + ".log"));
-        digis.push_back(std::make_unique<Digitizer>(std::string(argv[i]), logs.back().get()));
+    ROOT::EnableThreadSafety();
 
-        main_threads.emplace_back(&main_loop, i, digis.back().get(), logs.back().get());
+    std::vector<std::thread> main_threads;
+    std::vector<std::unique_ptr<DigiContext> > digis;
+    for (size_t i = 1; i <= N_DIGITIZERS; i++) {
+        digis.push_back(std::make_unique<DigiContext>(i, std::string(argv[i])));
+
+    }
+    
+    for (size_t i = 0; i < N_DIGITIZERS; i++) {
+        main_threads.emplace_back(&main_loop, i+1, std::ref(*digis[i]));
     }
 
     std::thread listener(&interrupt_listener);
@@ -91,11 +170,6 @@ int main(int argc, char** argv) {
     }
 
     listener.join();
-
-    for (size_t i = 0; i < N_DIGITIZERS; i++) {
-        digis[i].reset();
-        logs[i].reset();
-    }
 
     return 0;
 }

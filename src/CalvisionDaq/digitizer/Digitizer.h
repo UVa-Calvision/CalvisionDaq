@@ -67,19 +67,9 @@ public:
     void readout(const PredicateFunc& keep_running) {
         begin_acquisition();
 
-        auto start = std::chrono::high_resolution_clock::now();
-
         while (/*running() &&*/ keep_running(*this)) {
 
-            auto intermediate = std::chrono::high_resolution_clock::now();
-
             read();
-
-            auto finish = std::chrono::high_resolution_clock::now();
-            auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(finish - start);
-            log() << "Keep running time: " << std::chrono::duration_cast<std::chrono::microseconds>(intermediate - start).count() << " us\n";
-            log() << "Read time: " << std::chrono::duration_cast<std::chrono::microseconds>(finish - intermediate).count() << " us\n";
-            start = std::chrono::high_resolution_clock::now();
 
             // query_status();
 
@@ -93,7 +83,18 @@ public:
 
     int handle() const { return handle_; }
 
+    UIntType event_size() const;
+    constexpr static UIntType max_event_size() {
+        return calc_event_size(N_Groups, true);
+    }
+
 private:
+    constexpr static UIntType calc_event_size(UIntType groups, bool trigger) {
+        UIntType group_size = 12 * N_Samples;
+        if (trigger) group_size += 12 * N_Samples / 8;
+        return 16 + groups * group_size;
+    }
+
     int handle_; 
     CAEN_DGTZ_BoardInfo_t board_info_;
 
@@ -108,6 +109,8 @@ private:
     // Acquisition statuses
     bool running_, ready_, buffer_full_;
     UIntType num_events_read_;
+    UIntType event_size_;
 
     std::ostream* log_;
+
 };

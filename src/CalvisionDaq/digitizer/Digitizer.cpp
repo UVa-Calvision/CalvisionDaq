@@ -53,12 +53,8 @@ Digitizer::Digitizer(const std::string& config_file, std::ostream* out_log)
 }
 
 void Digitizer::open(CAEN_DGTZ_ConnectionType link_type, UIntType device_id) {
-    std::cout << "Attempting to open with link type " << static_cast<unsigned long>(link_type) << "\n"
-        << "\tand device id " << device_id << "\n";
     check(CAEN_DGTZ_OpenDigitizer(link_type, device_id, 0, 0, &handle_));
-    std::cout << "open returned with handle " << handle_ << "\n";
     check(CAEN_DGTZ_GetInfo(handle_, &board_info_));
-    std::cout << "retrieved the board info\n";
 }
 
 Digitizer::~Digitizer()
@@ -121,6 +117,19 @@ void Digitizer::begin_acquisition() {
     check(CAEN_DGTZ_MallocReadoutBuffer(handle_, &readout_buffer_, &readout_size_));
     log() << "Allocated " << readout_size_ << " bytes in memory for readout\n";
 
+    {
+        CAEN_DGTZ_EnaDis_t trigger_enum;
+        check(CAEN_DGTZ_GetFastTriggerDigitizing(handle_, &trigger_enum));
+        UIntType group_mask;
+        check(CAEN_DGTZ_GetGroupEnableMask(handle_, &group_mask));
+
+        UIntType n_groups = 0;
+        if (group_mask & 0b01) n_groups++;
+        if (group_mask & 0b10) n_groups++;
+
+        event_size_ = calc_event_size(n_groups, trigger_enum == CAEN_DGTZ_ENABLE);
+    }
+
     // Start acquisition
     num_events_read_ = 0;
 
@@ -152,12 +161,10 @@ auto time_in_ns() {
 
 void Digitizer::read() {
 
-    log() << "ReadDataStart: " << time_in_ns() << "\n";
     check(CAEN_DGTZ_ReadData(handle_,
                              CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                              readout_buffer_,
                              &readout_size_));
-    log() << "ReadDataStop : " << time_in_ns() << "\n";
 
     event_callback_(readout_buffer_, readout_size_);
     
@@ -188,8 +195,6 @@ void Digitizer::set_event_callback(const CallbackFunc& event_callback) {
 }
 
 void Digitizer::print() const {
-    std::cout << "Print command\n";
-
     // Board info
     log() << " ----- Board Info:\n"
               << "Model Name: " << board_info_.ModelName << "\n"
@@ -338,4 +343,8 @@ void Digitizer::set_trigger(TriggerSettings t) {
         check(CAEN_DGTZ_SetGroupFastTriggerThreshold(handle_, group, trigger_thresholds[t_index]));
         check(CAEN_DGTZ_SetGroupFastTriggerDCOffset(handle_, group, trigger_dc_offsets[t_index]));
     }
+}
+
+UIntType Digitizer::event_size() const {
+    return event_size_;
 }

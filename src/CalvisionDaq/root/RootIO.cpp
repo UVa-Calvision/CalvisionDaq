@@ -43,6 +43,7 @@ RootWriter::RootWriter(const std::string& filename)
     file_ = TFile::Open(filename.c_str(), "RECREATE");
     file_->SetCompressionLevel(0);   // no compression for fastest writes
     tree_ = new TTree("tree", "DRS Data");
+    tree_->SetMaxTreeSize(5'000'000'000LL);
 
     for (UIntType i = 0; i < N_Channels; i++) {
         vertical_gain_[i] = 1.0;
@@ -95,4 +96,7 @@ void RootWriter::handle_event(const x742EventData& event) {
 void RootWriter::write() {
     tree_->Write();
     file_->Close();
+
+    tree_ = nullptr;
+    file_ = nullptr;
 }
