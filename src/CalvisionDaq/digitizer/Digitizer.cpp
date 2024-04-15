@@ -38,11 +38,14 @@ UIntType DAC_middle_voltage_to_register(float voltage) {
     return DAC_voltage_to_register(-(voltage + 0.5 * Digitizer::voltage_p2p()));
 }
 
-Digitizer::Digitizer(const std::string& config_file, std::ostream* out_log)
+Digitizer::Digitizer()
     : handle_(-1)
     , readout_buffer_(nullptr)
     , readout_size_(0)
-    , log_(out_log)
+    , log_(&std::cout)
+{}
+
+void Digitizer::load_config(const std::string& config_file)
 {
     if (config_file == "") {
         log() << "[WARNING] No config file provided, continuing\n";
@@ -118,8 +121,7 @@ void Digitizer::begin_acquisition() {
     log() << "Allocated " << readout_size_ << " bytes in memory for readout\n";
 
     {
-        CAEN_DGTZ_EnaDis_t trigger_enum;
-        check(CAEN_DGTZ_GetFastTriggerDigitizing(handle_, &trigger_enum));
+        bool fast_trigger = get_fast_trigger_digitizing() == CAEN_DGTZ_ENABLE;
         UIntType group_mask;
         check(CAEN_DGTZ_GetGroupEnableMask(handle_, &group_mask));
 
@@ -127,7 +129,11 @@ void Digitizer::begin_acquisition() {
         if (group_mask & 0b01) n_groups++;
         if (group_mask & 0b10) n_groups++;
 
-        event_size_ = calc_event_size(n_groups, trigger_enum == CAEN_DGTZ_ENABLE);
+        event_size_ = calc_event_size(n_groups, fast_trigger);
+        
+        log() << "Number of groups enabled: " << n_groups << "\n"
+              << "Trigger digitized: " << fast_trigger << "\n"
+              << "Event Size: " << event_size_ << "\n";
     }
 
     // Start acquisition
@@ -139,13 +145,10 @@ void Digitizer::begin_acquisition() {
     log() << "Acquisition started.\n";
 }
 
-void Digitizer::write_calibration_tables(const std::string& calibration_dir) {
+void Digitizer::write_calibration_tables() {
     CalibrationTables tables;
     tables.load_from_digitizer(handle_);
-
-    for (const auto freq : DRS4FrequencyIndexer::values) {
-        tables.write(calibration_dir, freq);
-    }
+    tables.write_all(serial_code());
 }
 
 void Digitizer::end_acquisition() {
@@ -154,24 +157,30 @@ void Digitizer::end_acquisition() {
     log() << "Acquisition stopped.\n";
 }
 
-auto time_in_ns() {
-    using namespace std::chrono;
-    return duration_cast<nanoseconds>(high_resolution_clock::now().time_since_epoch());
-}
+#include "CalvisionDaq/common/Stopwatch.h"
 
 void Digitizer::read() {
+
+    // Stopwatch<std::chrono::microseconds> stopwatch;
 
     check(CAEN_DGTZ_ReadData(handle_,
                              CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                              readout_buffer_,
                              &readout_size_));
 
-    event_callback_(readout_buffer_, readout_size_);
     
     UIntType num_events = 0;
     check(CAEN_DGTZ_GetNumEvents(handle_, readout_buffer_, readout_size_, &num_events));
-    log() << "Num events: " << num_events << "\n";
+    // log() << "Num events: " << num_events << "\n";
     num_events_read_ += num_events;
+    
+    if (num_events > 0) {
+        event_callback_(readout_buffer_, readout_size_);
+    }
+
+    // const auto duration = stopwatch();
+
+    // log() << "Read " << num_events << " in " << duration << " (" << (duration / std::min(1u, num_events)) << " / event)\n";
 }
 
 #include <bitset>
@@ -244,16 +253,8 @@ void Digitizer::print() const {
         log() << "Group " << i << " fast trigger DC offset: " << threshold << "\n";
     }
 
-    CAEN_DGTZ_EnaDis_t enable;
-    // check(CAEN_DGTZ_GetFastTriggerDigitizing(handle_, &enable));
-    {
-        // Using GetFastTriggerDigitizing returns 2 when enabled? 
-        // Just read from the board config register instead
-        UIntType trigger_enable_temp;
-        check(CAEN_DGTZ_ReadRegister(handle_, 0x8000, &trigger_enable_temp));
-        enable = static_cast<CAEN_DGTZ_EnaDis_t>((trigger_enable_temp & (0b1 << 11)) >> 11);
-    }
-    log() << "Fast Trigger digitizing: " << *EnaDisTable.get<CaenEnumValue::Name>(enable) << "\n";
+
+    log() << "Fast Trigger digitizing: " << *EnaDisTable.get<CaenEnumValue::Name>(get_fast_trigger_digitizing()) << "\n";
 
     check(CAEN_DGTZ_GetFastTriggerMode(handle_, &trigger_mode));
     log() << "Fast Trigger mode: " << *TriggerModeTable.get<CaenEnumValue::Name>(trigger_mode) << "\n";
@@ -347,4 +348,27 @@ void Digitizer::set_trigger(TriggerSettings t) {
 
 UIntType Digitizer::event_size() const {
     return event_size_;
+}
+
+UIntType Digitizer::serial_code() const {
+    return board_info_.SerialNumber;
+}
+
+CAEN_DGTZ_EnaDis_t Digitizer::get_fast_trigger_digitizing() const {
+    // CAEN_DGTZ_EnaDis_t enable;
+    // check(CAEN_DGTZ_GetFastTriggerDigitizing(handle_, &enable));
+    
+    // Using GetFastTriggerDigitizing returns 2 when enabled? 
+    // Just read from the board config register instead
+    UIntType trigger_enable_temp;
+    check(CAEN_DGTZ_ReadRegister(handle_, 0x8000, &trigger_enable_temp));
+    return static_cast<CAEN_DGTZ_EnaDis_t>((trigger_enable_temp & (0b1 << 11)) >> 11);
+}
+
+void Digitizer::set_log(std::ostream* log) {
+    log_ = log;
+}
+
+std::ostream& Digitizer::log() const {
+    return *log_;
 }

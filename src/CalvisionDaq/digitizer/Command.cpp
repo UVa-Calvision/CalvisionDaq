@@ -44,7 +44,7 @@ template <>
 std::string parse_string<std::string>(const std::string& s) { return s; }
 
 template <>
-UIntType parse_string<UIntType>(const std::string& s) { return std::stol(s); }
+UIntType parse_string<UIntType>(const std::string& s) { return std::stol(s, nullptr, 0); }
 
 template <typename Table>
 typename Table::EnumType parse_enum_string(const std::string& s, const Table& table) {
@@ -150,8 +150,9 @@ void run_common(Digitizer& digi, const std::vector<std::string>& tokens) {
     
     switch (lookup_result->first) {
         case CommonCommand::Open: {
-            const auto& [device_type, device_id, unused] = parse_arguments<CAEN_DGTZ_ConnectionType, UIntType, UIntType>(tokens, 1);
-            digi.open(device_type, device_id);
+            std::cout << "Open has been deprecated in favor of automatically matching digitizer serial numbers\n";
+            // const auto& [device_type, device_id, unused] = parse_arguments<CAEN_DGTZ_ConnectionType, UIntType, UIntType>(tokens, 1);
+            // digi.open(device_type, device_id);
             } break;
         case CommonCommand::RecordLength: {
             const auto& [length] = parse_arguments<UIntType>(tokens, 1);
@@ -159,6 +160,7 @@ void run_common(Digitizer& digi, const std::vector<std::string>& tokens) {
             } break;
         case CommonCommand::PostTrigger: {
             const auto& [percent] = parse_arguments<UIntType>(tokens, 1);
+            std::cout << "Post trigger value: " << percent << "%\n";
             check(CAEN_DGTZ_SetPostTriggerSize(digi.handle(), percent));
             } break;
         case CommonCommand::TriggerPolarity: {

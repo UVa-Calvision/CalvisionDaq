@@ -23,9 +23,9 @@ void read_channels(const std::array<UIntType, 3 * N>& raw, const FuncType& targe
 }
 
 
-Decoder::Decoder()
+Decoder::Decoder(UIntType serial_number)
 {
-    calibration_tables_.read_all(".");
+    calibration_tables_.read_all(serial_number);
     for (const auto freq : DRS4FrequencyIndexer::values) {
         for (UIntType g = 0; g < N_Groups; g++) {
             raw_tables_[static_cast<UIntType>(freq)][g] = calibration_tables_.table(freq, g).to_table();

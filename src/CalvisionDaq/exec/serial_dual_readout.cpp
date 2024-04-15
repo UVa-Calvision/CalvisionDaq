@@ -24,9 +24,10 @@ class DigitizerContext {
 public:
     DigitizerContext(size_t i, const std::string& config_file)
         : log_(std::make_unique<std::ofstream>("readout_" + std::to_string(i) + ".log")),
-          digi_(std::make_unique<Digitizer>(config_file, log_.get())),
+          digi_(std::make_unique<Digitizer>(log_.get())),
           buffered_io_(std::make_unique<BufferedFileWriter>("outfile_" + std::to_string(i) + ".dat"))
     {
+        digi_->open(CAEN_DGTZ_USB, i);
         digi_->print();
         digi_->set_event_callback([writer = buffered_io_.get()] (const char* data, UIntType count) {
                 writer->write((const BufferedType*) data, count * sizeof(char) / sizeof(BufferedType));

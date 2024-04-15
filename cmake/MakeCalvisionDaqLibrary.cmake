@@ -33,6 +33,6 @@ function(install_CalvisionDaq_library LIBRARY_NAME FOLDER_NAME)
         EXPORT ${TARGETS_NAME}
         FILE ${TARGETS_NAME}.cmake
         NAMESPACE ${PROJECT_NAME}::
-        DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}"
+        DESTINATION "${CalvisionDaq_INSTALL_LIB_DIR}/cmake/${PROJECT_NAME}"
     )
 endfunction()

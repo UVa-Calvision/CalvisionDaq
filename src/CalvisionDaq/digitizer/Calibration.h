@@ -43,11 +43,11 @@ class CalibrationTables {
 public:
     CalibrationTables();
 
-    void read_all(const std::string& calibration_dir);
-    void write_all(const std::string& calibration_dir) const;
+    void read_all(UIntType serial_number);
+    void write_all(UIntType serial_number) const;
 
-    void read(const std::string& calibration_dir, CAEN_DGTZ_DRS4Frequency_t frequency);
-    void write(const std::string& calibration_dir, CAEN_DGTZ_DRS4Frequency_t frequency) const;
+    void read(UIntType serial_number, CAEN_DGTZ_DRS4Frequency_t frequency);
+    void write(UIntType serial_number, CAEN_DGTZ_DRS4Frequency_t frequency) const;
 
     void load_from_digitizer(int handle);
 
@@ -57,7 +57,7 @@ public:
     // void apply(x742EventData& data) const;
 
 private:
-    static std::string filename(const std::string& calibration_dir, CAEN_DGTZ_DRS4Frequency_t frequency);
+    static std::string filename(UIntType serial_number, CAEN_DGTZ_DRS4Frequency_t frequency);
 
     FrequencyArray<GroupArray<DRSGroupCalibration> > tables_;
 };

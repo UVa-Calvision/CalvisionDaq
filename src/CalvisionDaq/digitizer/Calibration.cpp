@@ -1,5 +1,6 @@
 #include "Calibration.h"
 #include "X742_Data.h"
+#include "Staging.h"
 
 DRSGroupCalibration::DRSGroupCalibration()
 {}
@@ -115,27 +116,27 @@ void DRSGroupCalibration::write(BinaryOutputFileStream& outfile) const {
 CalibrationTables::CalibrationTables()
 {}
 
-void CalibrationTables::read_all(const std::string& calibration_dir) {
+void CalibrationTables::read_all(UIntType serial_number) {
     for (const auto freq : DRS4FrequencyIndexer::values) {
-        read(calibration_dir, freq);
+        read(serial_number, freq);
     }
 }
 
-void CalibrationTables::write_all(const std::string& calibration_dir) const {
+void CalibrationTables::write_all(UIntType serial_number) const {
     for (const auto freq : DRS4FrequencyIndexer::values) {
-        write(calibration_dir, freq);
+        write(serial_number, freq);
     }
 }
 
-void CalibrationTables::read(const std::string& calibration_dir, CAEN_DGTZ_DRS4Frequency_t frequency) {
-    BinaryInputFileStream in(CalibrationTables::filename(calibration_dir, frequency));
+void CalibrationTables::read(UIntType serial_number, CAEN_DGTZ_DRS4Frequency_t frequency) {
+    BinaryInputFileStream in(CalibrationTables::filename(serial_number, frequency));
     for (auto&& group : tables_[static_cast<UIntType>(frequency)]) {
         group.read(in);
     }
 }
 
-void CalibrationTables::write(const std::string& calibration_dir, CAEN_DGTZ_DRS4Frequency_t frequency) const {
-    BinaryOutputFileStream out(CalibrationTables::filename(calibration_dir, frequency));
+void CalibrationTables::write(UIntType serial_number, CAEN_DGTZ_DRS4Frequency_t frequency) const {
+    BinaryOutputFileStream out(CalibrationTables::filename(serial_number, frequency));
     for (const auto& group : tables_[static_cast<UIntType>(frequency)]) {
         group.write(out);
     }
@@ -159,8 +160,8 @@ DRSGroupCalibration& CalibrationTables::table(CAEN_DGTZ_DRS4Frequency_t frequenc
     return tables_[static_cast<UIntType>(frequency)][group];
 }
 
-std::string CalibrationTables::filename(const std::string& calibration_dir, CAEN_DGTZ_DRS4Frequency_t frequency) {
-    return calibration_dir + "/calibration_" + std::string(*DRS4FrequencyTable.get<CaenEnumValue::Name>(frequency)) + ".dat";
+std::string CalibrationTables::filename(UIntType serial_number, CAEN_DGTZ_DRS4Frequency_t frequency) {
+    return (calibration_path() / ("calibration_" + std::to_string(serial_number) + "_" + std::string(*DRS4FrequencyTable.get<CaenEnumValue::Name>(frequency)) + ".dat")).string();
 }
 
 // void CalibrationTables::apply(x742EventData& data) const {

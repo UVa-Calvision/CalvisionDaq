@@ -7,7 +7,7 @@
 
 class Decoder {
 public:
-    Decoder();
+    Decoder(UIntType serial_number);
 
     void read_event(const char* data, UIntType count);
     void read_event(BinaryInputStream& input);

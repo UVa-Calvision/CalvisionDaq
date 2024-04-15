@@ -29,18 +29,21 @@ class Digitizer {
 public:
     using CallbackFunc = std::function<void(const char* data, UIntType count)>;
 
-    Digitizer(const std::string& config_file, std::ostream* log_out);
+    Digitizer();
     ~Digitizer();
 
-    std::ostream& log() const {
-        return *log_;
-    }
+
+    void load_config(const std::string& config_file);
+    UIntType serial_code() const;
+
+    void set_log(std::ostream* log);
+    std::ostream& log() const;
 
     void open(CAEN_DGTZ_ConnectionType link, UIntType device_id);
 
     void setup();
     void reset();
-    void write_calibration_tables(const std::string& calibration_dir);
+    void write_calibration_tables();
 
     void print() const;
 
@@ -90,9 +93,9 @@ public:
 
 private:
     constexpr static UIntType calc_event_size(UIntType groups, bool trigger) {
-        UIntType group_size = 12 * N_Samples;
-        if (trigger) group_size += 12 * N_Samples / 8;
-        return 16 + groups * group_size;
+        UIntType group_size = 2 + 3 * N_Samples;
+        if (trigger) group_size += 3 * N_Samples / 8;
+        return (4 + groups * group_size) * sizeof(UIntType);
     }
 
     int handle_; 
@@ -113,4 +116,5 @@ private:
 
     std::ostream* log_;
 
+    CAEN_DGTZ_EnaDis_t get_fast_trigger_digitizing() const;
 };
