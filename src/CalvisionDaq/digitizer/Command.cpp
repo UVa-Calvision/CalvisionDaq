@@ -21,17 +21,27 @@ constexpr static auto CommonCommandTable = CommandTableType<CommonCommandIndexer
     std::pair(CommonCommand::FPIOLevel,             std::tuple("FPIO_LEVEL"                         )),
     std::pair(CommonCommand::EnableInput,           std::tuple("ENABLE_INPUT"                       )),
     std::pair(CommonCommand::DigitizeFastTrigger,   std::tuple("ENABLED_FAST_TRIGGER_DIGITIZING"    )),
-    std::pair(CommonCommand::MaxNumEventsBLT,       std::tuple("MAX_NUM_EVENTS_BLT"                 ))
+    std::pair(CommonCommand::MaxNumEventsBLT,       std::tuple("MAX_NUM_EVENTS_BLT"                 )),
+    std::pair(CommonCommand::MaxReadoutCount,       std::tuple("MAX_READOUT_COUNT"                  ))
 );
 
 constexpr static auto GroupCommandTable = CommandTableType<GroupCommandIndexer>::make_table(
     std::pair(GroupCommand::EnableInput,                std::tuple("ENABLE_INPUT"       )),
-    std::pair(GroupCommand::ChannelDcOffsets,           std::tuple("GRP_CH_DC_OFFSET"   ))
+    std::pair(GroupCommand::ChannelDcOffsets,           std::tuple("GRP_CH_DC_OFFSET"   )),
+    std::pair(GroupCommand::Ch0DcOffset,                std::tuple("CH0_DC_OFFSET"      )),
+    std::pair(GroupCommand::Ch1DcOffset,                std::tuple("CH1_DC_OFFSET"      )),
+    std::pair(GroupCommand::Ch2DcOffset,                std::tuple("CH2_DC_OFFSET"      )),
+    std::pair(GroupCommand::Ch3DcOffset,                std::tuple("CH3_DC_OFFSET"      )),
+    std::pair(GroupCommand::Ch4DcOffset,                std::tuple("CH4_DC_OFFSET"      )),
+    std::pair(GroupCommand::Ch5DcOffset,                std::tuple("CH5_DC_OFFSET"      )),
+    std::pair(GroupCommand::Ch6DcOffset,                std::tuple("CH6_DC_OFFSET"      )),
+    std::pair(GroupCommand::Ch7DcOffset,                std::tuple("CH7_DC_OFFSET"      ))
 );
 
 constexpr static auto TriggerCommandTable = CommandTableType<TriggerCommandIndexer>::make_table(
     std::pair(TriggerCommand::DcOffset,     std::tuple("DC_OFFSET"          )),
-    std::pair(TriggerCommand::Threshold,    std::tuple("TRIGGER_THRESHOLD"  ))
+    std::pair(TriggerCommand::Threshold,    std::tuple("TRIGGER_THRESHOLD"  )),
+    std::pair(TriggerCommand::Type,         std::tuple("TYPE"               ))
 );
 
 // ----- Parse
@@ -104,6 +114,41 @@ CAEN_DGTZ_EnaDis_t parse_string<CAEN_DGTZ_EnaDis_t>(const std::string& s) {
 template <>
 CAEN_DGTZ_ConnectionType parse_string<CAEN_DGTZ_ConnectionType>(const std::string& s) {
     return parse_enum_string(s, ConnectionTypeTable);
+}
+
+INDEXED_ENUM(TriggerType,
+    ECL,
+    NIM,
+    Neg_400mV,
+    Neg_200mV,
+    Bipolar,
+    TTL,
+    Positive
+);
+
+INDEXED_ENUM(TriggerTypeValue,
+    Name,
+    DC_Offset,
+    Threshold
+)
+
+constexpr inline auto TriggerTypeTable = EnumTable<TriggerTypeIndexer, TriggerTypeValueIndexer, std::string_view, UIntType, UIntType>::make_table(
+    std::pair(TriggerType::ECL,           std::tuple("ECL",       0x55A0, 0x6666)),
+    std::pair(TriggerType::NIM,           std::tuple("NIM",       0x8000, 0x51C6)),
+    std::pair(TriggerType::Neg_400mV,     std::tuple("Neg_400mV", 0x8000, 0x5C16)),
+    std::pair(TriggerType::Neg_200mV,     std::tuple("Neg_200mV", 0x8000, 0x613E)),
+    std::pair(TriggerType::Bipolar,       std::tuple("Bipolar",   0x8000, 0x6666)),
+    std::pair(TriggerType::TTL,           std::tuple("TTL",       0xA800, 0x6666)),
+    std::pair(TriggerType::Positive,      std::tuple("Positive",  0x91A7, 0x6666))
+);
+
+template <>
+TriggerType parse_string<TriggerType>(const std::string& s) {
+    auto lookup_result = TriggerTypeTable.lookup<TriggerTypeValue::Name>(s);
+    if (lookup_result)
+        return lookup_result->first;
+    else
+        throw std::runtime_error("Failed to parse trigger type");
 }
 
 
@@ -205,7 +250,18 @@ void run_common(Digitizer& digi, const std::vector<std::string>& tokens) {
             const auto& [n] = parse_arguments<UIntType>(tokens, 1);
             check(CAEN_DGTZ_SetMaxNumEventsBLT(digi.handle(), n));
             } break;
+        case CommonCommand::MaxReadoutCount: {
+            const auto& [n] = parse_arguments<UIntType>(tokens, 1);
+            if (n > 0) {
+                digi.set_max_readout_count(n);
+            }
+            } break;
     }
+}
+
+void set_channel_dc_offset(Digitizer& digi, UIntType group, UIntType channel, const std::vector<std::string>& tokens) {
+    const auto& [offset] = parse_arguments<UIntType>(tokens, 1);
+    check(CAEN_DGTZ_SetChannelDCOffset(digi.handle(), group * N_Channels + channel, offset));
 }
 
 void run_group(Digitizer& digi, UIntType group, const std::vector<std::string>& tokens) {
@@ -237,6 +293,14 @@ void run_group(Digitizer& digi, UIntType group, const std::vector<std::string>& 
             check(CAEN_DGTZ_SetChannelDCOffset(digi.handle(), group * N_Channels + 6, c6));
             check(CAEN_DGTZ_SetChannelDCOffset(digi.handle(), group * N_Channels + 7, c7));
             } break;
+        case GroupCommand::Ch0DcOffset: { set_channel_dc_offset(digi, group, 0, tokens); break; }
+        case GroupCommand::Ch1DcOffset: { set_channel_dc_offset(digi, group, 1, tokens); break; }
+        case GroupCommand::Ch2DcOffset: { set_channel_dc_offset(digi, group, 2, tokens); break; }
+        case GroupCommand::Ch3DcOffset: { set_channel_dc_offset(digi, group, 3, tokens); break; }
+        case GroupCommand::Ch4DcOffset: { set_channel_dc_offset(digi, group, 4, tokens); break; }
+        case GroupCommand::Ch5DcOffset: { set_channel_dc_offset(digi, group, 5, tokens); break; }
+        case GroupCommand::Ch6DcOffset: { set_channel_dc_offset(digi, group, 6, tokens); break; }
+        case GroupCommand::Ch7DcOffset: { set_channel_dc_offset(digi, group, 7, tokens); break; }
     }
 }
 
@@ -253,7 +317,17 @@ void run_trigger(Digitizer& digi, const std::vector<std::string>& tokens) {
         case TriggerCommand::Threshold: {
             const auto& [threshold] = parse_arguments<UIntType>(tokens, 1);
             check(CAEN_DGTZ_SetGroupFastTriggerThreshold(digi.handle(), 0, threshold));
+            check(CAEN_DGTZ_SetGroupFastTriggerThreshold(digi.handle(), 1, threshold));
+            } break;
+        case TriggerCommand::Type: {
+            const auto& [type] = parse_arguments<TriggerType>(tokens, 1);
+            const auto& entry = *TriggerTypeTable.get(type);
+            const UIntType offset = entry.get<TriggerTypeValue::DC_Offset>();
+            check(CAEN_DGTZ_SetGroupFastTriggerDCOffset(digi.handle(), 0, offset));
+            check(CAEN_DGTZ_SetGroupFastTriggerDCOffset(digi.handle(), 1, offset));
+            const UIntType threshold = entry.get<TriggerTypeValue::Threshold>();
             check(CAEN_DGTZ_SetGroupFastTriggerThreshold(digi.handle(), 0, threshold));
+            check(CAEN_DGTZ_SetGroupFastTriggerThreshold(digi.handle(), 1, threshold));
             } break;
     }   
 }
@@ -265,7 +339,6 @@ void run_setup(std::istream& input, Digitizer& digi) {
 
     std::string line;
     while (std::getline(input, line)) {
-        std::cout << "Reading line: " << line << "\n";
         std::vector<std::string> tokens = tokenize(line);
         if (tokens.empty()) {
             continue;

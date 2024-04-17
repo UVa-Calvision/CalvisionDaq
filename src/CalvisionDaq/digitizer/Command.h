@@ -21,17 +21,27 @@ INDEXED_ENUM(CommonCommand,
     FPIOLevel,
     EnableInput,
     DigitizeFastTrigger,
-    MaxNumEventsBLT
+    MaxNumEventsBLT,
+    MaxReadoutCount
 );
 
 INDEXED_ENUM(GroupCommand,
-    EnableInput,
-    ChannelDcOffsets
+    EnableInput,     
+    ChannelDcOffsets,
+    Ch0DcOffset,     
+    Ch1DcOffset,     
+    Ch2DcOffset,     
+    Ch3DcOffset,     
+    Ch4DcOffset,     
+    Ch5DcOffset,     
+    Ch6DcOffset,     
+    Ch7DcOffset
 );
 
 INDEXED_ENUM(TriggerCommand,
     DcOffset,
-    Threshold
+    Threshold,
+    Type
 );
 
 void run_setup(std::istream& input, Digitizer& digi);

@@ -15,19 +15,9 @@
 
 using EventType = CAEN_DGTZ_X742_EVENT_t;
 
-enum TriggerSettings : unsigned int {
-        ECL = 0,
-        NIM = 1,
-        Negative_400mV = 2,
-        Negative_200mV = 3,
-        Bipolar = 4,
-        TTL = 5,
-        Positive_2V = 6
-};
-
 class Digitizer {
 public:
-    using CallbackFunc = std::function<void(const char* data, UIntType count)>;
+    using CallbackFunc = std::function<void(const char* data, UIntType event_size, UIntType num_events)>;
 
     Digitizer();
     ~Digitizer();
@@ -44,6 +34,8 @@ public:
     void setup();
     void reset();
     void write_calibration_tables();
+    void set_max_readout_count(UIntType n);
+    std::optional<UIntType> max_readout_count() const;
 
     void print() const;
 
@@ -62,9 +54,6 @@ public:
     void set_channel_offsets(const ChannelArray<UIntType>& offsets);
 
     static FloatingType voltage_p2p();
-
-    void set_trigger(TriggerSettings t);
-
 
     template <typename PredicateFunc>
     void readout(const PredicateFunc& keep_running) {
@@ -103,6 +92,7 @@ private:
 
     char* readout_buffer_;
     UIntType readout_size_;
+    std::optional<UIntType> max_readout_count_;
 
     GroupArray<CAEN_DGTZ_DRS4Correction_t> correction_table_;
 

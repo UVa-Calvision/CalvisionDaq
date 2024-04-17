@@ -43,6 +43,7 @@ Digitizer::Digitizer()
     , readout_buffer_(nullptr)
     , readout_size_(0)
     , log_(&std::cout)
+    , max_readout_count_(std::nullopt)
 {}
 
 void Digitizer::load_config(const std::string& config_file)
@@ -171,11 +172,11 @@ void Digitizer::read() {
     
     UIntType num_events = 0;
     check(CAEN_DGTZ_GetNumEvents(handle_, readout_buffer_, readout_size_, &num_events));
-    // log() << "Num events: " << num_events << "\n";
-    num_events_read_ += num_events;
     
     if (num_events > 0) {
-        event_callback_(readout_buffer_, readout_size_);
+        // log() << "Num events in readout: " << num_events << "\n";
+        event_callback_(readout_buffer_, event_size_, num_events);
+        num_events_read_ += num_events;
     }
 
     // const auto duration = stopwatch();
@@ -289,11 +290,11 @@ void Digitizer::print() const {
     for (UIntType i = 0; i < N_Channels; i++) {
         UIntType offset;
         check(CAEN_DGTZ_GetChannelDCOffset(handle_, i, &offset));
-        float dc_offset = -voltage_p2p() * static_cast<float>(offset) / static_cast<float>(0xFFFF);
+        float dc_offset = voltage_p2p() * static_cast<float>(offset) / static_cast<float>(0xFFFF);
         log() << "Channel " << i << " DC offset: " << dc_offset << "\n";
         log() << "Channel " << i << " range: ["
-            << -(dc_offset + voltage_p2p()) << ", "
-            << -(dc_offset +             0) << "]\n";
+            << (dc_offset - voltage_p2p()) << ", "
+            << (dc_offset -             0) << "]\n";
     }
 
     CAEN_DGTZ_ZS_Mode_t zs_mode;
@@ -312,38 +313,6 @@ void Digitizer::set_channel_offsets(const ChannelArray<UIntType>& offsets) {
 // Peak to peak voltage is 1 V = 1000 mV
 FloatingType Digitizer::voltage_p2p() {
     return 1000.0;
-}
-
-constexpr static std::array<UIntType, 7> trigger_dc_offsets = {
-            0x55A0,
-            0x8000,
-            0x51C6,
-            0x8000,
-            0xA800,
-            0x91A7
-        };
-
-constexpr static std::array<UIntType, 7> trigger_thresholds = {
-            0x6666,
-            0x51C6,
-            0x51C6,
-            0x613E,
-            0x6666,
-            0x6666,
-            0x6666
-        };
-
-void Digitizer::set_trigger(TriggerSettings t) {
-    unsigned int t_index = static_cast<unsigned int>(t);
-    if (t_index >= 7) {
-        log() << "Trigger Settings out of bounds\n";
-        return;
-    }
-
-    for (UIntType group = 0; group < 2; group++) {
-        check(CAEN_DGTZ_SetGroupFastTriggerThreshold(handle_, group, trigger_thresholds[t_index]));
-        check(CAEN_DGTZ_SetGroupFastTriggerDCOffset(handle_, group, trigger_dc_offsets[t_index]));
-    }
 }
 
 UIntType Digitizer::event_size() const {
@@ -371,4 +340,12 @@ void Digitizer::set_log(std::ostream* log) {
 
 std::ostream& Digitizer::log() const {
     return *log_;
+}
+
+void Digitizer::set_max_readout_count(UIntType n) {
+    max_readout_count_ = n;
+}
+
+std::optional<UIntType> Digitizer::max_readout_count() const {
+    return max_readout_count_;
 }

@@ -14,28 +14,30 @@
 #include <iostream>
 #include <fstream>
 #include <memory>
+#include <atomic>
 
 volatile bool quit_readout = false;
-
-bool stop_readout(const Digitizer&) {
-    return !quit_readout;
-}
+std::atomic<bool> dump_hv = false;
+std::atomic<bool> dump_lv = false;
 
 using PoolType = MemoryPool<Digitizer::max_event_size()>;
 using QueueType = SPSCQueue<typename PoolType::BlockType, 2048>;
 
 
-void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueType& queue) {
+void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueType& queue, std::atomic<bool>& dump) {
     std::cout << thread_id << ": Creating decoder\n";
     Decoder decoder(ctx.digi().serial_code());
-    std::cout << thread_id << ": Creating root io\n";
-    RootWriter root_io(ctx.path_prefix() + "/outfile_" + ctx.name() + ".root");
+    const std::string root_io_path = ctx.path_prefix() + "/outfile_" + ctx.name() + ".root";
+    std::cout << thread_id << ": Creating root io: " << root_io_path << "\n";
+    RootWriter root_io(root_io_path);
     root_io.setup(decoder.event());
 
     std::cout << thread_id << ": Entering decode loop\n";
 
     // Stopwatch<std::chrono::microseconds> stopwatch;
     // uint64_t last_read_waits = 0;
+
+    size_t decode_count = 0;
 
     while (auto block = queue.pop()) {
         // const auto wait_duration = stopwatch();
@@ -45,10 +47,23 @@ void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueT
         // }
 
         BinaryInputBufferStream input((const char*) block->block().data(), ctx.digi().event_size());
+
         decoder.read_event(input);
         decoder.apply_corrections();
         root_io.handle_event(decoder.event());
+        if (dump.load()) {
+            std::cout << thread_id << ": writing waveform dump\n";
+            root_io.dump_last_event(ctx.path_prefix() + "/dump_" + ctx.name());
+            dump.store(false);
+            std::cout << thread_id << ": waveform dump written\n";
+        }
+
         pool.deallocate(block);
+
+        decode_count++;
+        if (ctx.digi().max_readout_count() && decode_count >= *ctx.digi().max_readout_count()) {
+            break;
+        }
 
         // stopwatch();
     }
@@ -56,15 +71,14 @@ void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueT
     root_io.write();
 }
 
-void main_loop(size_t thread_id, DigitizerContext& ctx) {
+void main_loop(size_t thread_id, DigitizerContext& ctx, std::atomic<bool>& dump) {
 
     PoolType pool(1024);
     QueueType queue;
 
     ctx.digi().set_event_callback(
-        [&pool, &queue, event_size = ctx.digi().event_size()]
-        (const char* data, UIntType count) {
-            size_t num_events = count / event_size;
+        [&pool, &queue]
+        (const char* data, UIntType event_size, UIntType num_events) {
             auto blocks = pool.allocate(num_events);
             for (auto* block : blocks) {
                 copy_raw_buffer<uint8_t, char>(block->block().data(), data, event_size);
@@ -75,7 +89,7 @@ void main_loop(size_t thread_id, DigitizerContext& ctx) {
 
 
     try {
-        std::thread decode_thread(&decode_loop, thread_id, std::ref(ctx), std::ref(pool), std::ref(queue));
+        std::thread decode_thread(&decode_loop, thread_id, std::ref(ctx), std::ref(pool), std::ref(queue), std::ref(dump));
 
         ctx.log() << "Beginning readout\n";
         ctx.digi().readout([](const Digitizer& d) {
@@ -84,19 +98,22 @@ void main_loop(size_t thread_id, DigitizerContext& ctx) {
                 // Can maybe sleep for more efficient readouts?
                 using namespace std::chrono_literals;
                 std::this_thread::sleep_for(20ms);
+                if (d.max_readout_count() && d.num_events_read() >= *d.max_readout_count()) {
+                    return false;
+                }
                 return !quit_readout;
             });
 
 
-        ctx.log() << "Stopped readout\n";
+        ctx.log() << thread_id << ": Stopped readout\n";
 
         queue.close();
         decode_thread.join();
 
-        ctx.log() << "Resetting digitzer...\n";
+        ctx.log() << thread_id << ": Resetting digitzer...\n";
         ctx.digi().reset();
 
-        ctx.log() << "Done.\n";
+        ctx.log() << thread_id << ": Done.\n";
 
     } catch (const CaenError& error) {
         std::cerr << "[FATAL ERROR]: ";
@@ -105,16 +122,49 @@ void main_loop(size_t thread_id, DigitizerContext& ctx) {
     }
 }
 
+#include <termios.h>
 
 void interrupt_listener() {
-    std::string message;
-    while (std::getline(std::cin, message)) {
-        std::cout << "Got the message: [" << message << "]\n";
-        if (message == "stop") {
+    struct termios cintty;
+    struct termios cinsave;
+    tcgetattr(STDIN_FILENO, &cinsave);
+    cintty = cinsave;
+
+    cintty.c_lflag &= ~(ICANON);
+    cintty.c_cc[VMIN] = 0;
+    cintty.c_cc[VTIME] = 0;
+    cintty.c_cc[VEOF] = 4;
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &cintty);
+
+    char buffer[4096];
+    size_t current_size = 0;
+    while (!quit_readout) {
+        int num_read = ::read(STDIN_FILENO, buffer + current_size, 4095 - current_size);
+        if (num_read < 0) {
+            // An error has occured, stop the readout
             quit_readout = true;
-            return;
+            break;
+        } else if (num_read == 0) {
+            // didn't read anything
+            continue;
+        } else {
+            current_size += num_read;
+            buffer[current_size] = '\0';
+            std::string message(buffer);
+
+            if (message == "stop\n") {
+                quit_readout = true;
+                break;
+            } else if (message == "sample plot\n") {
+                dump_hv.store(true);
+                dump_lv.store(true);
+                current_size = 0;
+            }
         }
     }
+    std::cout << "Out of the loop\n";
+    tcsetattr(STDIN_FILENO, TCSANOW, &cinsave);
 }
 
 template <DigiMap d>
@@ -149,13 +199,13 @@ int main(int argc, char** argv) {
     std::vector<std::thread> main_threads;
     AllDigitizers digis{std::string(argv[1])};
 
-    auto& hv_ctx = make_context<DigiMap::HV>(digis, argv);
-    auto& lv_ctx = make_context<DigiMap::LV>(digis, argv);
+    auto& hv_ctx = make_context<DigiMap::HG>(digis, argv);
+    auto& lv_ctx = make_context<DigiMap::LG>(digis, argv);
 
     std::cout << "Beginning to make threads...\n";
 
-    main_threads.emplace_back(&main_loop, 1, std::ref(hv_ctx));
-    main_threads.emplace_back(&main_loop, 2, std::ref(lv_ctx));
+    main_threads.emplace_back(&main_loop, 1, std::ref(hv_ctx), std::ref(dump_hv));
+    main_threads.emplace_back(&main_loop, 2, std::ref(lv_ctx), std::ref(dump_lv));
 
     std::thread listener(&interrupt_listener);
 
@@ -164,6 +214,8 @@ int main(int argc, char** argv) {
     for (size_t i = 0; i < main_threads.size(); i++) {
         main_threads[i].join();
     }
+
+    quit_readout = true;
 
     listener.join();
 

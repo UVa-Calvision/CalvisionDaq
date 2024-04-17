@@ -19,15 +19,18 @@ public:
 
     void write();
 
+    void dump_last_event(const std::string& filename);
+
 private:
     TTree* tree_;
     TFile* file_;
 
-    Float_t vertical_gain_[N_Channels], vertical_offset_[N_Channels];
-    Double_t horizontal_offset_, trigger_offset_, time_[N_Samples];
+    constexpr static UIntType N_Total_Channels = N_Groups * N_Channels;
+
     Int_t samples_;
-    Float_t channels_[N_Channels][N_Samples];
-    Float_t trigger_[N_Samples];
-
-
+    Float_t vertical_gain_[N_Total_Channels], vertical_offset_[N_Total_Channels];
+    Double_t horizontal_offset_, trigger_offset_, time_[N_Samples];
+    Float_t channels_[N_Total_Channels][N_Samples];
+    Float_t trigger_[N_Groups][N_Samples];
+    Bool_t channel_digitized_[N_Total_Channels], trigger_digitized_[N_Groups];
 };

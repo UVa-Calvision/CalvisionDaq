@@ -21,4 +21,4 @@ make_CalvisionDaq_exec(dual_readout "CalvisionDaqCommon;CalvisionDaqDigitizer;Ca
 # make_CalvisionDaq_exec(serial_dual_readout "CalvisionDaqCommon;CalvisionDaqDigitizer;CalvisionDaqRoot")
 make_CalvisionDaq_exec(reset_digitizer "CalvisionDaqCommon;CalvisionDaqDigitizer")
 # make_CalvisionDaq_exec(check_timing "CalvisionDaqCommon;CalvisionDaqDigitizer")
-make_CalvisionDaq_exec(test "CalvisionDaqCommon")
+# make_CalvisionDaq_exec(test "CalvisionDaqCommon")
