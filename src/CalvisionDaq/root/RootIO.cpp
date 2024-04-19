@@ -98,15 +98,15 @@ void RootWriter::setup(x742EventData& event) {
     tree_->Branch("channel_digitized", channel_digitized_, branch_typename("channel_digitized", "B", {N_Total_Channels}));
     tree_->Branch("trigger_digitized", trigger_digitized_, branch_typename("trigger_digitized", "B", {N_Groups}));
 
-    for (size_t i = 0; i < N_Total_Channels; i++) {
-        std::string name = "channel" + std::to_string(i);
-        tree_->Branch(name, channels_[i], branch_typename(name, "F", {N_Samples}));
-    }
+    // for (size_t i = 0; i < N_Total_Channels; i++) {
+    //     std::string name = "channel" + std::to_string(i);
+    //     tree_->Branch(name, channels_[i], branch_typename(name, "F", {N_Samples}));
+    // }
 
-    for (size_t i = 0; i < N_Groups; i++) {
-        std::string name = "trigger" + std::to_string(i);
-        tree_->Branch(name, trigger_[i], branch_typename("trigger", 
-    }
+    // for (size_t i = 0; i < N_Groups; i++) {
+    //     std::string name = "trigger" + std::to_string(i);
+    //     tree_->Branch(name, trigger_[i], branch_typename("trigger", 
+    // }
 }
 
 constexpr static AdcConversion adc_to_mv;

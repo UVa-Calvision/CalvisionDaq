@@ -1,13 +1,13 @@
 #include "Staging.h"
 #include "Digitizer.h"
 
-DigitizerContext::DigitizerContext(size_t n, std::optional<std::string> run_name)
+DigitizerContext::DigitizerContext(CAEN_DGTZ_ConnectionType link, size_t arg, std::optional<std::string> run_name)
     : path_prefix_(staging_path().string() + (run_name ? "/" + *run_name : ""))
 {
     digi_ = std::make_unique<Digitizer>();
-    digi_->open(CAEN_DGTZ_USB, n);
+    digi_->open(link, arg);
 
-    std::cout << "Found and opened digitizer " << n << " with serial code " << digi_->serial_code() << "\n";
+    std::cout << "Found and opened digitizer " << arg << " with serial code " << digi_->serial_code() << "\n";
 }
 
 DigitizerContext::~DigitizerContext() {
@@ -72,9 +72,19 @@ AllDigitizers::AllDigitizers(std::optional<std::string> run_name) {
         ::create_directory(staging_path().string() + "/" + *run_name);
     }
 
+    constexpr std::array<size_t, 2> optical_link_pids = {49100, 49841};
+
+    for (const size_t pid : optical_link_pids) {
+        try {
+            ctxs.push_back(std::make_unique<DigitizerContext>(CAEN_DGTZ_USB_A4818, pid, run_name));
+        } catch (const CaenError& e) {
+            std::cerr << "A4818 Optical Link " << pid << " is unavailable.\n";
+        }
+    }
+
     for (const auto& dir_entry : std::filesystem::directory_iterator{"/dev"}) {
         if (auto dev_id = device_is_digitizer(dir_entry.path())) {
-            ctxs.push_back(std::make_unique<DigitizerContext>(*dev_id, run_name));
+            ctxs.push_back(std::make_unique<DigitizerContext>(CAEN_DGTZ_USB, *dev_id, run_name));
         }
     }
 }

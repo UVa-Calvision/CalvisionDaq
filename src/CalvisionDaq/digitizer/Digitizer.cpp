@@ -57,7 +57,13 @@ void Digitizer::load_config(const std::string& config_file)
 }
 
 void Digitizer::open(CAEN_DGTZ_ConnectionType link_type, UIntType device_id) {
-    check(CAEN_DGTZ_OpenDigitizer(link_type, device_id, 0, 0, &handle_));
+    std::cout << "Attempting to open device " << device_id << "\n";
+
+    int x = device_id;
+    void* arg = (void*) &x;
+
+    check(CAEN_DGTZ_OpenDigitizer2(link_type, arg, 0, 0, &handle_));
+    std::cout << "Got handle " << handle_ << "\n";
     check(CAEN_DGTZ_GetInfo(handle_, &board_info_));
 }
 

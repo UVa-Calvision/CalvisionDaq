@@ -40,6 +40,8 @@ void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueT
     size_t decode_count = 0;
 
     while (auto block = queue.pop()) {
+        std::cout << thread_id << ": Got a block!\n";
+
         // const auto wait_duration = stopwatch();
         // if (ctx.queue().read_waits() > last_read_waits) {
         //     std::cout << thread_id << ": read waited " << wait_duration << "\n";
@@ -47,6 +49,8 @@ void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueT
         // }
 
         BinaryInputBufferStream input((const char*) block->block().data(), ctx.digi().event_size());
+
+        std::cout << "Expected event size: " << ctx.digi().event_size() << "\n";
 
         decoder.read_event(input);
         decoder.apply_corrections();
@@ -58,7 +62,11 @@ void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueT
             std::cout << thread_id << ": waveform dump written\n";
         }
 
+        std::cout << thread_id << ": Deallocating block " << block << "\n";
+
         pool.deallocate(block);
+
+        std::cout << thread_id << ": Deallocated.\n";
 
         decode_count++;
         if (ctx.digi().max_readout_count() && decode_count >= *ctx.digi().max_readout_count()) {
@@ -77,10 +85,15 @@ void main_loop(size_t thread_id, DigitizerContext& ctx, std::atomic<bool>& dump)
     QueueType queue;
 
     ctx.digi().set_event_callback(
-        [&pool, &queue]
+        [&pool, &queue, thread_id]
         (const char* data, UIntType event_size, UIntType num_events) {
+            std::cout << thread_id << ": Number of events: " << num_events << "\n"
+                      << thread_id << ": Actual Event size: " << event_size << "\n";
+            std::cout.flush();
+
             auto blocks = pool.allocate(num_events);
             for (auto* block : blocks) {
+                std::cout << thread_id << ": adding block " << block << "\n";
                 copy_raw_buffer<uint8_t, char>(block->block().data(), data, event_size);
                 queue.add(block);
                 data += event_size;
@@ -95,10 +108,11 @@ void main_loop(size_t thread_id, DigitizerContext& ctx, std::atomic<bool>& dump)
 
         ctx.digi().readout([](const Digitizer& d) {
                 std::cout << "Read " << d.num_events_read() << "\n";
+                std::cout.flush();
 
                 // Can maybe sleep for more efficient readouts?
-                using namespace std::chrono_literals;
-                std::this_thread::sleep_for(20ms);
+                // using namespace std::chrono_literals;
+                // std::this_thread::sleep_for(10ms);
                 if (d.max_readout_count() && d.num_events_read() >= *d.max_readout_count()) {
                     return false;
                 }
@@ -198,27 +212,33 @@ int main(int argc, char** argv) {
     ROOT::EnableThreadSafety();
 
     std::vector<std::thread> main_threads;
-    AllDigitizers digis{std::string(argv[1])};
 
-    auto& hv_ctx = make_context<DigiMap::HG>(digis, argv);
-    auto& lv_ctx = make_context<DigiMap::LG>(digis, argv);
+    try {
+        AllDigitizers digis{std::string(argv[1])};
 
-    std::cout << "Beginning to make threads...\n";
+        auto& hv_ctx = make_context<DigiMap::HG>(digis, argv);
+        auto& lv_ctx = make_context<DigiMap::LG>(digis, argv);
 
-    main_threads.emplace_back(&main_loop, 1, std::ref(hv_ctx), std::ref(dump_hv));
-    main_threads.emplace_back(&main_loop, 2, std::ref(lv_ctx), std::ref(dump_lv));
+        std::cout << "Beginning to make threads...\n";
 
-    std::thread listener(&interrupt_listener);
+        main_threads.emplace_back(&main_loop, 1, std::ref(hv_ctx), std::ref(dump_hv));
+        main_threads.emplace_back(&main_loop, 2, std::ref(lv_ctx), std::ref(dump_lv));
 
-    // joining threads
+        std::thread listener(&interrupt_listener);
 
-    for (size_t i = 0; i < main_threads.size(); i++) {
-        main_threads[i].join();
+        // joining threads
+
+        for (size_t i = 0; i < main_threads.size(); i++) {
+            main_threads[i].join();
+        }
+
+        quit_readout = true;
+
+        listener.join();
+    } catch(const CaenError& error) {
+        std::cerr << "[FATAL ERROR]: ";
+        error.print_error(std::cerr);
     }
-
-    quit_readout = true;
-
-    listener.join();
 
     return 0;
 }
