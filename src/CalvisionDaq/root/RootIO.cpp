@@ -57,7 +57,7 @@ RootWriter::RootWriter(const std::string& filename)
     file_ = TFile::Open(filename.c_str(), "RECREATE");
     // file_->SetCompressionLevel(0);   // no compression for fastest writes
     tree_ = new TTree("tree", "DRS Data");
-    tree_->SetMaxTreeSize(5'000'000'000LL);
+    tree_->SetMaxTreeSize(2'000'000'000LL);
 
     for (UIntType i = 0; i < N_Channels; i++) {
         vertical_gain_[i] = 1.0;
@@ -97,6 +97,16 @@ void RootWriter::setup(x742EventData& event) {
     tree_->Branch("trigger", trigger_, branch_typename("trigger", "F", {N_Groups, N_Samples}));
     tree_->Branch("channel_digitized", channel_digitized_, branch_typename("channel_digitized", "B", {N_Total_Channels}));
     tree_->Branch("trigger_digitized", trigger_digitized_, branch_typename("trigger_digitized", "B", {N_Groups}));
+
+    for (size_t i = 0; i < N_Total_Channels; i++) {
+        std::string name = "channel" + std::to_string(i);
+        tree_->Branch(name, channels_[i], branch_typename(name, "F", {N_Samples}));
+    }
+
+    for (size_t i = 0; i < N_Groups; i++) {
+        std::string name = "trigger" + std::to_string(i);
+        tree_->Branch(name, trigger_[i], branch_typename("trigger", 
+    }
 }
 
 constexpr static AdcConversion adc_to_mv;
@@ -148,6 +158,9 @@ void RootWriter::handle_event(const x742EventData& event) {
 
 void RootWriter::write() {
     tree_->Write();
+
+    file_ = tree_->GetCurrentFile();
+    file_->Write();
     file_->Close();
 
     tree_ = nullptr;

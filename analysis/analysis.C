@@ -3,7 +3,7 @@
 #include "PulseFitter.h"
 #include "CamelFitter.h"
 
-constexpr unsigned int N_Channels = 8;
+constexpr unsigned int N_Channels = 2 * 8;
 constexpr unsigned int N_Samples = 1024;
 
 int binCalc(double x_min, double x_max, double vgain) {
@@ -15,29 +15,42 @@ int binCalc(double x_min, double x_max, double vgain) {
 class TreeReader {
     public:
         TreeReader(TString filename) {
-            file_ = new TFile(filename);
-            tree_ = (TTree*) file_->Get("tree");
+            tree_ = new TChain("tree");
+            tree_->Add(filename);
+
+            std::cout << "The following files were added to the TChain:\n";
+            const auto& fileElements = *tree_->GetListOfFiles();
+            for (TObject const* op : fileElements) {
+                auto chainElement = static_cast<const TChainElement*>(op);
+                std::cout << chainElement->GetTitle() << "\n";
+            }
+
+            tree_->Print();
+
 
             tree_->SetBranchAddress("vertical_gain", vertical_gain_.data());
             tree_->SetBranchAddress("vertical_offset", vertical_offset_.data());
             tree_->SetBranchAddress("horizontal_interval", &horizontal_interval_);
             tree_->SetBranchAddress("channels", channels_[0].data());
+            tree_->SetBranchAddress("time", times_.data());
         }
 
         UInt_t num_entries() const {
-            return tree_->GetEntries();
+            return 5000; // std::min(5000, tree_->GetEntries());
         }
 
         void get_entry(UInt_t i) {
             tree_->GetEntry(i);
         }
 
-        std::array<Double_t, N_Samples> time() const {
-            std::array<Double_t, N_Samples> t;
-            for (int i = 0; i < N_Samples; i++) {
-                t[i] = static_cast<Double_t>(i) * horizontal_interval_;
-            }
-            return t;
+        const std::array<Double_t, N_Samples>& time() const {
+            // std::array<Double_t, N_Samples> t;
+            // for (int i = 0; i < N_Samples; i++) {
+            //     t[i] = static_cast<Double_t>(i) * horizontal_interval_;
+            // }
+            // return t;
+
+            return times_;
         }
 
         std::array<Double_t, N_Samples> voltages(UInt_t channel) const {
@@ -59,12 +72,12 @@ class TreeReader {
         }
 
     private:
-        TFile* file_;
-        TTree* tree_;
+        TChain* tree_;
 
         Float_t horizontal_interval_;
         std::array<Float_t, N_Channels> vertical_offset_, vertical_gain_;
         std::array<std::array<Float_t, N_Samples>, N_Channels> channels_;
+        std::array<Double_t, N_Samples> times_;
 };
 
 void plot_samples(TreeReader& tree, int channel) {
@@ -95,7 +108,8 @@ void analysis(TString filename, int channel) {
     canvas->cd(1);
 
     plot_samples(tree, channel);
-
+    
+    std::cout << "Done plotting samples\n";
 
     canvas->cd(2);
 
@@ -105,10 +119,17 @@ void analysis(TString filename, int channel) {
             -0.5 * tree.horizontal_interval(), 
             (static_cast<Double_t>(N_Samples) - 0.5) * tree.horizontal_interval());
 
+    std::cout << "Entering loop with " << tree.num_entries() << " entries\n";
     for (int i = 0; i < tree.num_entries(); i++) {
+
+        if (i % 10000 == 0) {
+            std::cout << "Event " << i << "\n";
+        }
+
         tree.get_entry(i);
         const auto times = tree.time();
         const auto volts = tree.voltages(channel);
+
         for (int s = 0; s < N_Samples; s++) {
             hprof->Fill(times[s], volts[s]);
         }
@@ -158,7 +179,7 @@ void analysis(TString filename, int channel) {
     const double x_max = y_max * 3;
     int nx = binCalc(x_min, x_max, tree.vertical_gain(channel));
     auto phd = new TH1D("phd", "Pulse Heights;Voltage [mV];Count", nx, x_min, x_max);
-    auto pid = new TH1D("pid", "Pulse Integral around peak / #Deltat;Voltage [mV];Count", nx, x_min, x_max);
+    // auto pid = new TH1D("pid", "Pulse Integral around peak / #Deltat;Voltage [mV];Count", nx, x_min, x_max);
 
     for (int i = 0; i < tree.num_entries(); i++) {
         tree.get_entry(i);
@@ -167,11 +188,11 @@ void analysis(TString filename, int channel) {
 
         phd->Fill(volts[i_peak] - baseline);
 
-        double sum = 0;
-        for (int n = i_start; n < i_stop; n++) {
-            sum += volts[n] - baseline;
-        }
-        pid->Fill(sum * i_scale);
+        // double sum = 0;
+        // for (int n = i_start; n < i_stop; n++) {
+        //     sum += volts[n] - baseline;
+        // }
+        // pid->Fill(sum * i_scale);
     }
 
 
@@ -180,10 +201,10 @@ void analysis(TString filename, int channel) {
     phd->Draw();
     find_peaks(phd);
 
-    canvas->cd(4);
-    pid->SetLineColor(kBlack);
-    pid->Draw();
-    find_peaks(pid);
+//     canvas->cd(4);
+//     pid->SetLineColor(kBlack);
+//     pid->Draw();
+//     find_peaks(pid);
 
     canvas->Update();
     canvas->SaveAs(TString::Format("peaks_%d.png", channel));

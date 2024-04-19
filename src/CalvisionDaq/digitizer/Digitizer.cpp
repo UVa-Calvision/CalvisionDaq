@@ -175,6 +175,9 @@ void Digitizer::read() {
     
     if (num_events > 0) {
         // log() << "Num events in readout: " << num_events << "\n";
+        if (num_events >= 1000) {
+            log() << "Large readout buffer, possibly missing events!\n";
+        }
         event_callback_(readout_buffer_, event_size_, num_events);
         num_events_read_ += num_events;
     }

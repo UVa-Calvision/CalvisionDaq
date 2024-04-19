@@ -91,7 +91,8 @@ void main_loop(size_t thread_id, DigitizerContext& ctx, std::atomic<bool>& dump)
     try {
         std::thread decode_thread(&decode_loop, thread_id, std::ref(ctx), std::ref(pool), std::ref(queue), std::ref(dump));
 
-        ctx.log() << "Beginning readout\n";
+        ctx.log() << "Beginning readout" << std::endl;
+
         ctx.digi().readout([](const Digitizer& d) {
                 std::cout << "Read " << d.num_events_read() << "\n";
 
@@ -105,15 +106,15 @@ void main_loop(size_t thread_id, DigitizerContext& ctx, std::atomic<bool>& dump)
             });
 
 
-        ctx.log() << thread_id << ": Stopped readout\n";
+        ctx.log() << thread_id << ": Stopped readout" << std::endl;
 
         queue.close();
         decode_thread.join();
 
-        ctx.log() << thread_id << ": Resetting digitzer...\n";
+        ctx.log() << thread_id << ": Resetting digitzer..." << std::endl;
         ctx.digi().reset();
 
-        ctx.log() << thread_id << ": Done.\n";
+        ctx.log() << thread_id << ": Done." << std::endl;
 
     } catch (const CaenError& error) {
         std::cerr << "[FATAL ERROR]: ";
