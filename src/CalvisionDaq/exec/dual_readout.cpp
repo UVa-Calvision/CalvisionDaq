@@ -16,12 +16,12 @@
 #include <memory>
 #include <atomic>
 
-volatile bool quit_readout = false;
+std::atomic<bool> quit_readout = false;
 std::atomic<bool> dump_hv = false;
 std::atomic<bool> dump_lv = false;
 
 using PoolType = MemoryPool<Digitizer::max_event_size()>;
-using QueueType = SPSCQueue<typename PoolType::BlockType, 2048>;
+using QueueType = SPSCQueue<typename PoolType::BlockType, 1024 * 50>;
 
 
 void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueType& queue, std::atomic<bool>& dump) {
@@ -34,13 +34,14 @@ void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueT
 
     std::cout << thread_id << ": Entering decode loop\n";
 
-    // Stopwatch<std::chrono::microseconds> stopwatch;
+    Stopwatch<std::chrono::microseconds> stopwatch;
     // uint64_t last_read_waits = 0;
 
     size_t decode_count = 0;
 
     while (auto block = queue.pop()) {
-        std::cout << thread_id << ": Got a block!\n";
+        std::cout << "Decoding event " << decode_count << "\n";
+        // std::cout << thread_id << ": Got a block!\n";
 
         // const auto wait_duration = stopwatch();
         // if (ctx.queue().read_waits() > last_read_waits) {
@@ -50,11 +51,13 @@ void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueT
 
         BinaryInputBufferStream input((const char*) block->block().data(), ctx.digi().event_size());
 
-        std::cout << "Expected event size: " << ctx.digi().event_size() << "\n";
+        // std::cout << "Expected event size: " << ctx.digi().event_size() << "\n";
 
         decoder.read_event(input);
         decoder.apply_corrections();
+        // stopwatch();
         root_io.handle_event(decoder.event());
+        // std::cout << thread_id << ": Root io: " << stopwatch() << "\n";
         if (dump.load()) {
             std::cout << thread_id << ": writing waveform dump\n";
             root_io.dump_last_event(ctx.path_prefix() + "/dump_" + ctx.name());
@@ -62,11 +65,11 @@ void decode_loop(size_t thread_id, DigitizerContext& ctx, PoolType& pool, QueueT
             std::cout << thread_id << ": waveform dump written\n";
         }
 
-        std::cout << thread_id << ": Deallocating block " << block << "\n";
+        // std::cout << thread_id << ": Deallocating block " << block << "\n";
 
         pool.deallocate(block);
 
-        std::cout << thread_id << ": Deallocated.\n";
+        // std::cout << thread_id << ": Deallocated.\n";
 
         decode_count++;
         if (ctx.digi().max_readout_count() && decode_count >= *ctx.digi().max_readout_count()) {
@@ -87,13 +90,8 @@ void main_loop(size_t thread_id, DigitizerContext& ctx, std::atomic<bool>& dump)
     ctx.digi().set_event_callback(
         [&pool, &queue, thread_id]
         (const char* data, UIntType event_size, UIntType num_events) {
-            std::cout << thread_id << ": Number of events: " << num_events << "\n"
-                      << thread_id << ": Actual Event size: " << event_size << "\n";
-            std::cout.flush();
-
             auto blocks = pool.allocate(num_events);
             for (auto* block : blocks) {
-                std::cout << thread_id << ": adding block " << block << "\n";
                 copy_raw_buffer<uint8_t, char>(block->block().data(), data, event_size);
                 queue.add(block);
                 data += event_size;
@@ -101,22 +99,27 @@ void main_loop(size_t thread_id, DigitizerContext& ctx, std::atomic<bool>& dump)
         });
 
 
+    std::thread decode_thread(&decode_loop, thread_id, std::ref(ctx), std::ref(pool), std::ref(queue), std::ref(dump));
+
     try {
-        std::thread decode_thread(&decode_loop, thread_id, std::ref(ctx), std::ref(pool), std::ref(queue), std::ref(dump));
 
         ctx.log() << "Beginning readout" << std::endl;
 
         ctx.digi().readout([](const Digitizer& d) {
                 std::cout << "Read " << d.num_events_read() << "\n";
-                std::cout.flush();
+                // std::cout.flush();
 
                 // Can maybe sleep for more efficient readouts?
-                // using namespace std::chrono_literals;
-                // std::this_thread::sleep_for(10ms);
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(5ms);
+                // std::cout << "Woke from sleep\n";
+                // std::cout.flush();
                 if (d.max_readout_count() && d.num_events_read() >= *d.max_readout_count()) {
                     return false;
                 }
-                return !quit_readout;
+                // std::cout << "Finished predicate check\n";
+                // std::cout.flush();
+                return !quit_readout.load();
             });
 
 
@@ -134,6 +137,16 @@ void main_loop(size_t thread_id, DigitizerContext& ctx, std::atomic<bool>& dump)
         std::cerr << "[FATAL ERROR]: ";
         error.print_error(std::cerr);
         error.print_error(ctx.log());
+        quit_readout.store(true);;
+        queue.close();
+    } catch(...) {
+        std::cerr << "[UNEXPECTED FATAL ERROR!]\n";
+        quit_readout.store(true);
+        queue.close();
+    }
+
+    if (decode_thread.joinable()) {
+        decode_thread.join();
     }
 }
 
@@ -154,11 +167,11 @@ void interrupt_listener() {
 
     char buffer[4096];
     size_t current_size = 0;
-    while (!quit_readout) {
+    while (!quit_readout.load()) {
         int num_read = ::read(STDIN_FILENO, buffer + current_size, 4095 - current_size);
         if (num_read < 0) {
             // An error has occured, stop the readout
-            quit_readout = true;
+            quit_readout.store(true);
             break;
         } else if (num_read == 0) {
             // didn't read anything
@@ -169,7 +182,7 @@ void interrupt_listener() {
             std::string message(buffer);
 
             if (message == "stop\n") {
-                quit_readout = true;
+                quit_readout.store(true);
                 break;
             } else if (message == "sample plot\n") {
                 dump_hv.store(true);
@@ -178,6 +191,7 @@ void interrupt_listener() {
             }
         }
     }
+    quit_readout.store(true);
     std::cout << "Out of the loop\n";
     tcsetattr(STDIN_FILENO, TCSANOW, &cinsave);
 }
@@ -212,6 +226,7 @@ int main(int argc, char** argv) {
     ROOT::EnableThreadSafety();
 
     std::vector<std::thread> main_threads;
+    std::thread listener(&interrupt_listener);
 
     try {
         AllDigitizers digis{std::string(argv[1])};
@@ -224,21 +239,28 @@ int main(int argc, char** argv) {
         main_threads.emplace_back(&main_loop, 1, std::ref(hv_ctx), std::ref(dump_hv));
         main_threads.emplace_back(&main_loop, 2, std::ref(lv_ctx), std::ref(dump_lv));
 
-        std::thread listener(&interrupt_listener);
 
         // joining threads
 
         for (size_t i = 0; i < main_threads.size(); i++) {
-            main_threads[i].join();
+            try {
+                main_threads[i].join();
+            } catch (const CaenError& error) {
+                std::cerr << "[FATAL INTERIOR ERROR]: " ;
+                error.print_error(std::cerr);
+                quit_readout.store(true);
+            }
         }
 
-        quit_readout = true;
-
-        listener.join();
     } catch(const CaenError& error) {
         std::cerr << "[FATAL ERROR]: ";
         error.print_error(std::cerr);
     }
+
+    quit_readout.store(true);
+
+    listener.join();
+
 
     return 0;
 }
