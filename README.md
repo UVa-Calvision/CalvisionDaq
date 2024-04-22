@@ -5,7 +5,9 @@ DRS readout and analysis for Calvision.
 ## Dependencies
 
 Uses the `calvision` conda environment on the Calvision portable computer. Needs CAEN libraries
-which is a little bit of a mess at the moment (not in the git repo since they're proprietary?)
+which is a little bit of a mess at the moment (not in the git repo since they're proprietary?). Also
+needs the github repo `Hollenbeck-Hayden/cpp-utils` but this is already installed in the Calvision
+`local_install` directory.
 
 ## Building
 
@@ -14,8 +16,8 @@ Usual cmake build process:
 git clone https://github.com/hhollenb/CalvisionDaq.git
 cd CalvisionDaq
 mkdir build && cd build
-cmake ..
-make
+cmake -DCMAKE_PREFIX_PATH=$HOME/local_install -DCMAKE_INSTALL_PREFIX=$HOME/local_install ..
+make -j4 && make install
 ```
 
 ## Running

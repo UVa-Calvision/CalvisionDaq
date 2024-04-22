@@ -209,7 +209,7 @@ void RootWriter::dump_last_event(const std::string& filename) {
 
     out.write<Double_t, N_Samples>(time_);
     // First 8 channels are going to SiPM readout signals, other channels will be auxiliary devices
-    for (UIntType i = 0; i < N_Channels; i++) {
+    for (UIntType i = 0; i < N_Total_Channels; i++) {
         out.write<Float_t, N_Samples>(channels_[i]);
     }
 }
