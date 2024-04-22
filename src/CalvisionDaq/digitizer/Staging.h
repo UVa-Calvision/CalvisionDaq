@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CppUtils/c_util/Enum.h"
+#include "CaenEnums.h"
 
 #include <filesystem>
 #include <memory>
@@ -31,7 +32,7 @@ class Digitizer;
 
 class DigitizerContext {
 public:
-    DigitizerContext(size_t n, std::optional<std::string> run_name);
+    DigitizerContext(CAEN_DGTZ_ConnectionType link, size_t arg, std::optional<std::string> run_name);
     ~DigitizerContext();
 
     void make_log(const std::string& name);

@@ -59,6 +59,8 @@ public:
     void readout(const PredicateFunc& keep_running) {
         begin_acquisition();
 
+        clear_data();
+
         while (/*running() &&*/ keep_running(*this)) {
 
             read();
@@ -78,6 +80,10 @@ public:
     UIntType event_size() const;
     constexpr static UIntType max_event_size() {
         return calc_event_size(N_Groups, true);
+    }
+
+    void clear_data() {
+        check(CAEN_DGTZ_ClearData(handle_));
     }
 
 private:

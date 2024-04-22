@@ -57,7 +57,13 @@ void Digitizer::load_config(const std::string& config_file)
 }
 
 void Digitizer::open(CAEN_DGTZ_ConnectionType link_type, UIntType device_id) {
-    check(CAEN_DGTZ_OpenDigitizer(link_type, device_id, 0, 0, &handle_));
+    int x = device_id;
+    void* arg = (void*) &x;
+
+    check(CAEN_DGTZ_OpenDigitizer2(link_type, arg, 0, 0, &handle_));
+
+    reset();
+
     check(CAEN_DGTZ_GetInfo(handle_, &board_info_));
 }
 
@@ -164,18 +170,31 @@ void Digitizer::read() {
 
     // Stopwatch<std::chrono::microseconds> stopwatch;
 
+    // std::cout << "Read data\n";
+    // std::cout.flush();
     check(CAEN_DGTZ_ReadData(handle_,
                              CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                              readout_buffer_,
                              &readout_size_));
+    // std::cout << "Done reading data: readout_size_ = " << readout_size_ << "\n";
+    // std::cout.flush();
+
+    // if (readout_size_ > 0 && readout_size_ < event_size_) {
+    //     std::cout << "Small readout size???\n";
+    //     std::cout.flush();
+    //     return;
+    // }
 
     
     UIntType num_events = 0;
     check(CAEN_DGTZ_GetNumEvents(handle_, readout_buffer_, readout_size_, &num_events));
+    // std::cout << "Done getting num events. readout_size - expected_size = " << (readout_size_ - num_events * event_size_) << "\n";
+    // std::cout.flush();
+
     
     if (num_events > 0) {
         // log() << "Num events in readout: " << num_events << "\n";
-        if (num_events >= 1000) {
+        if (num_events >= 800) {
             log() << "Large readout buffer, possibly missing events!\n";
         }
         event_callback_(readout_buffer_, event_size_, num_events);

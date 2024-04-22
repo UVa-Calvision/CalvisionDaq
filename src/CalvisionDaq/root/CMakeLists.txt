@@ -9,6 +9,7 @@ target_link_libraries(${LIBRARY_NAME} PUBLIC
     ROOT::Core
     ROOT::Tree
     ROOT::RIO
+    ROOT::Matrix
 )
 
 install_CalvisionDaq_library(${LIBRARY_NAME} root)

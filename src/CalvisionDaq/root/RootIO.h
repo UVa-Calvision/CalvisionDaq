@@ -2,6 +2,8 @@
 
 #include "CalvisionDaq/digitizer/X742_Data.h"
 
+#include <TVector.h>
+#include <TParameter.h>
 #include <TFile.h>
 #include <TTree.h>
 #include <string>
@@ -25,11 +27,12 @@ private:
     TTree* tree_;
     TFile* file_;
 
-    constexpr static UIntType N_Total_Channels = N_Groups * N_Channels;
+    constexpr static UIntType N_Total_Channels = 10;
 
-    Int_t samples_;
-    Float_t vertical_gain_[N_Total_Channels], vertical_offset_[N_Total_Channels];
-    Double_t horizontal_offset_, trigger_offset_, time_[N_Samples];
+    TParameter<Int_t> samples_;
+    TVectorD vertical_gain_, vertical_offset_;
+    TParameter<Double_t> horizontal_offset_, trigger_offset_;
+    Double_t time_[N_Samples];
     Float_t channels_[N_Total_Channels][N_Samples];
     Float_t trigger_[N_Groups][N_Samples];
     Bool_t channel_digitized_[N_Total_Channels], trigger_digitized_[N_Groups];
