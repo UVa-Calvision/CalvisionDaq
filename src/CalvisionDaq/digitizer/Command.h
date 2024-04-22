@@ -22,7 +22,8 @@ INDEXED_ENUM(CommonCommand,
     EnableInput,
     DigitizeFastTrigger,
     MaxNumEventsBLT,
-    MaxReadoutCount
+    MaxReadoutCount,
+    AcquisitionMode
 );
 
 INDEXED_ENUM(GroupCommand,

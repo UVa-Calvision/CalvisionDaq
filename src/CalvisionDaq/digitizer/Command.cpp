@@ -22,7 +22,8 @@ constexpr static auto CommonCommandTable = CommandTableType<CommonCommandIndexer
     std::pair(CommonCommand::EnableInput,           std::tuple("ENABLE_INPUT"                       )),
     std::pair(CommonCommand::DigitizeFastTrigger,   std::tuple("ENABLED_FAST_TRIGGER_DIGITIZING"    )),
     std::pair(CommonCommand::MaxNumEventsBLT,       std::tuple("MAX_NUM_EVENTS_BLT"                 )),
-    std::pair(CommonCommand::MaxReadoutCount,       std::tuple("MAX_READOUT_COUNT"                  ))
+    std::pair(CommonCommand::MaxReadoutCount,       std::tuple("MAX_READOUT_COUNT"                  )),
+    std::pair(CommonCommand::AcquisitionMode,       std::tuple("ACQUISITION_MODE"                   ))
 );
 
 constexpr static auto GroupCommandTable = CommandTableType<GroupCommandIndexer>::make_table(
@@ -93,6 +94,14 @@ CAEN_DGTZ_IOLevel_t parse_string<CAEN_DGTZ_IOLevel_t>(const std::string& s) {
     if (s == "NIM") return CAEN_DGTZ_IOLevel_NIM;
     if (s == "TTL") return CAEN_DGTZ_IOLevel_TTL;
     return parse_enum_string(s, IOLevelTable);
+}
+
+template <>
+CAEN_DGTZ_AcqMode_t parse_string<CAEN_DGTZ_AcqMode_t>(const std::string& s) {
+    if (s == "SW_CONTROLLED") return CAEN_DGTZ_SW_CONTROLLED;
+    if (s == "S_IN_CONTROLLED") return CAEN_DGTZ_S_IN_CONTROLLED;
+    if (s == "FIRST_TRG_CONTROLLED") return CAEN_DGTZ_S_IN_CONTROLLED;
+    throw std::runtime_error("Failed to parse AcqMode enum");
 }
 
 template <>
@@ -255,6 +264,10 @@ void run_common(Digitizer& digi, const std::vector<std::string>& tokens) {
             if (n > 0) {
                 digi.set_max_readout_count(n);
             }
+            } break;
+        case CommonCommand::AcquisitionMode: {
+            const auto& [mode] = parse_arguments<CAEN_DGTZ_AcqMode_t>(tokens, 1);
+            check(CAEN_DGTZ_SetAcquisitionMode(digi.handle(), mode));
             } break;
     }
 }
