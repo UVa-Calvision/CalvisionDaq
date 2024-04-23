@@ -163,7 +163,7 @@ void RootWriter::handle_event(const x742EventData& event) {
     //     }
     // }
 
-    // cblas_dcopy(N_Samples, adc_to_mv.times[event.group_data[0].frequency].data(), 1, time_, 1);
+    cblas_dcopy(N_Samples, adc_to_mv.times[event.group_data[0].frequency].data(), 1, time_, 1);
     for (UIntType g = 0; g < N_Groups; g++) {
         if (event.group_present[g]) {
             if (event.group_data[g].trigger_digitized) {
