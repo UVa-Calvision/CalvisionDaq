@@ -71,7 +71,7 @@ RootWriter::RootWriter(const std::string& filename)
     vertical_gain_.Reset(0.0);
 
     vertical_offset_ = TArrayD(N_Total_Channels);
-    vertical_offset.Reset(0.0);
+    vertical_offset_.Reset(0.0);
 
     // TODO: fix
     horizontal_offset_ = TParameter<Double_t>("horizontal_offset", 0);
