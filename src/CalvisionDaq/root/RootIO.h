@@ -2,7 +2,7 @@
 
 #include "CalvisionDaq/digitizer/X742_Data.h"
 
-#include <TVector.h>
+#include <TArray.h>
 #include <TParameter.h>
 #include <TFile.h>
 #include <TTree.h>
@@ -30,7 +30,7 @@ private:
     constexpr static UIntType N_Total_Channels = 10;
 
     TParameter<Int_t> samples_;
-    TVectorD vertical_gain_, vertical_offset_;
+    TArrayD vertical_gain_, vertical_offset_;
     TParameter<Double_t> horizontal_offset_, trigger_offset_;
     Double_t time_[N_Samples];
     Float_t channels_[N_Total_Channels][N_Samples];

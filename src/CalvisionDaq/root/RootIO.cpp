@@ -67,13 +67,11 @@ RootWriter::RootWriter(const std::string& filename)
     // tree_->SetMaxTreeSize(2'000'000'000LL);
 
     samples_ = TParameter<Int_t>("samples", static_cast<Int_t>(N_Samples));
-    vertical_gain_ = TVectorD(N_Total_Channels);
-    vertical_offset_ = TVectorD(N_Total_Channels);
+    vertical_gain_ = TArrayD(N_Total_Channels);
+    vertical_gain_.Reset(0.0);
 
-    for (UIntType i = 0; i < N_Total_Channels; i++) {
-        vertical_gain_[i] = 1.0;
-        vertical_offset_[i] = 0.0;
-    }
+    vertical_offset_ = TArrayD(N_Total_Channels);
+    vertical_offset.Reset(0.0);
 
     // TODO: fix
     horizontal_offset_ = TParameter<Double_t>("horizontal_offset", 0);
@@ -82,8 +80,8 @@ RootWriter::RootWriter(const std::string& filename)
     // Write static data file
     file_->WriteObject(&samples_, "samples");
     file_->WriteObject(&horizontal_offset_, "horizontal_offset");
-    file_->WriteObject(&vertical_gain_, "vertical_gain", "", N_Total_Channels);
-    file_->WriteObject(&vertical_offset_, "vertical_offset", "", N_Total_Channels);
+    file_->WriteObject(&vertical_gain_, "vertical_gain");
+    file_->WriteObject(&vertical_offset_, "vertical_offset");
     file_->WriteObject(&trigger_offset_, "trigger_offset");
 }
 
