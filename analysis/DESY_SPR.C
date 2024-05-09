@@ -162,7 +162,7 @@ void analysis(TString filename, int channel, int nmax=-1) {
 	      << "Integrating over range: " << start << " : " << stop << "\n"
 	      << "Integrating over bins: " << i_start << " : " << i_stop << "\n";
 
-    double y_min = baseline*0.95;
+    double y_min = baseline;
     double y_max = pulse_fit.y_peak;
 
     for (double x : {start, stop, peak}) {
