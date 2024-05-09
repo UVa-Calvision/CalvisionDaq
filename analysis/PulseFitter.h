@@ -1,3 +1,5 @@
+#pragma once
+
 struct PulseParams {
     constexpr static size_t size() { return sizeof(PulseParams) / sizeof(double); }
 
@@ -84,10 +86,15 @@ struct PulseFitter {
         initial.tau = (x_peak - initial.x0) / (initial.a * log(x_peak - initial.x0));
 
         pulse_fit->SetParameter(0, initial.x0);
+	pulse_fit->SetParName(0, "t0");
         pulse_fit->SetParameter(1, initial.A);
+	pulse_fit->SetParName(1, "A");
         pulse_fit->SetParameter(2, initial.a);
+	pulse_fit->SetParName(2, "a");
         pulse_fit->SetParameter(3, initial.tau);
+	pulse_fit->SetParName(3, "tau");
         pulse_fit->FixParameter(4, initial.pedestal);
+	pulse_fit->SetParName(4, "pedestal");
 
         pulse_fit->SetRange(pedestal_end, x_peak);
 
