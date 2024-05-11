@@ -11,7 +11,7 @@ struct AdcConversion {
     constexpr static UIntType adc_size = 0x1000;
     constexpr static FloatingType adc_scale = 1000.0 / adc_size;
 
-    constexpr AdcConversion()
+    AdcConversion()
         : offset()
     {
         FrequencyArray<FloatingType> periods;
@@ -123,7 +123,7 @@ void RootWriter::setup(x742EventData& event) {
     // }
 }
 
-constexpr static AdcConversion adc_to_mv;
+const static AdcConversion adc_to_mv;
 
 void convert_adc_to_mv(const SampleArray<FloatingType>& adc, Float_t* target) {
     cblas_scopy(N_Samples, adc_to_mv.offset.data(), 1, target, 1);

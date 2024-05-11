@@ -42,6 +42,7 @@ Digitizer::Digitizer()
     : handle_(-1)
     , readout_buffer_(nullptr)
     , readout_size_(0)
+    , allocated_size_(0)
     , log_(&std::cout)
     , max_readout_count_(std::nullopt)
 {}
@@ -59,6 +60,10 @@ void Digitizer::load_config(const std::string& config_file)
 void Digitizer::open(CAEN_DGTZ_ConnectionType link_type, UIntType device_id) {
     int x = device_id;
     void* arg = (void*) &x;
+
+    std::cout << "Attempting to open digitizer...\n"
+              << "Link type: " << static_cast<unsigned int>(link_type) << "\n"
+              << "arg: " << *((int*) arg) << "\n";
 
     check(CAEN_DGTZ_OpenDigitizer2(link_type, arg, 0, 0, &handle_));
 
@@ -91,41 +96,37 @@ void Digitizer::reset() {
 void Digitizer::setup() {
     reset();
 
-    // check(CAEN_DGTZ_IRQWait(handle_, 10));
-
-    // Use TTL IO
-    // TODO: Probably not using IO?
-    check(CAEN_DGTZ_SetIOLevel(handle_, CAEN_DGTZ_IOLevel_TTL));
-
-    // Use full 1024 event buffer
-    check(CAEN_DGTZ_SetMaxNumEventsBLT(handle_, 1000));
-
-    // 1 GHz Sampling frequency
-    check(CAEN_DGTZ_SetDRS4SamplingFrequency(handle_, CAEN_DGTZ_DRS4_1GHz));
-
-    // Only using group 1
-    check(CAEN_DGTZ_SetGroupEnableMask(handle_, 0b01));
-
-    // ----- Trigger
-    // Enable fast trigger TR0
-    check(CAEN_DGTZ_SetFastTriggerMode(handle_, CAEN_DGTZ_TRGMODE_ACQ_ONLY));
-
-    // Don't digitize trigger (less hang time)
     check(CAEN_DGTZ_SetFastTriggerDigitizing(handle_, CAEN_DGTZ_ENABLE));
-
-    // Set post trigger size (in %)
+    check(CAEN_DGTZ_SetFastTriggerMode(handle_, CAEN_DGTZ_TRGMODE_ACQ_ONLY));
+    check(CAEN_DGTZ_SetRecordLength(handle_, 1024));
     check(CAEN_DGTZ_SetPostTriggerSize(handle_, 50));
+    check(CAEN_DGTZ_SetIOLevel(handle_, CAEN_DGTZ_IOLevel_NIM));
+    check(CAEN_DGTZ_SetMaxNumEventsBLT(handle_, 1023));
+    check(CAEN_DGTZ_SetAcquisitionMode(handle_, CAEN_DGTZ_SW_CONTROLLED));
+    check(CAEN_DGTZ_SetExtTriggerInputMode(handle_, CAEN_DGTZ_TRGMODE_DISABLED));
 
-    // Set channel offsets to middle scale (0x7FFF)
-    // ChannelArray<UIntType> offsets;
-    // for (auto& offset : offsets) offset = 0x7FFF /*+ static_cast<UIntType>(7 * 214)*/;
-    // set_channel_offsets(offsets);
+    check(CAEN_DGTZ_SetGroupEnableMask(handle_, 0b01));
+    for (unsigned int i = 0; i < 8; i++) {
+        check(CAEN_DGTZ_SetChannelDCOffset(handle_, i, 0x7fff));
+    }
+
+    for (unsigned int i = 8; i < 16; i++) {
+        check(CAEN_DGTZ_SetChannelDCOffset(handle_, i, 0x8f00));
+    }
+
+    check(CAEN_DGTZ_SetDRS4SamplingFrequency(handle_, CAEN_DGTZ_DRS4_1GHz));
+    for (unsigned int i = 0; i < 2; i++) {
+        check(CAEN_DGTZ_SetGroupFastTriggerDCOffset(handle_, i, 32768));
+        check(CAEN_DGTZ_SetGroupFastTriggerThreshold(handle_, i, 26214));
+    }
+
+    check(CAEN_DGTZ_AllocateEvent(handle_, (void**) &event_742));
 }
 
 void Digitizer::begin_acquisition() {
     // Allocate readout memory
-    check(CAEN_DGTZ_MallocReadoutBuffer(handle_, &readout_buffer_, &readout_size_));
-    log() << "Allocated " << readout_size_ << " bytes in memory for readout\n";
+    check(CAEN_DGTZ_MallocReadoutBuffer(handle_, &readout_buffer_, &allocated_size_));
+    log() << "Allocated " << allocated_size_ << " bytes in memory for readout\n";
 
     {
         bool fast_trigger = get_fast_trigger_digitizing() == CAEN_DGTZ_ENABLE;
@@ -146,8 +147,9 @@ void Digitizer::begin_acquisition() {
     // Start acquisition
     num_events_read_ = 0;
 
-    check(CAEN_DGTZ_SWStartAcquisition(handle_));
     check(CAEN_DGTZ_ClearData(handle_));
+    check(CAEN_DGTZ_SWStartAcquisition(handle_));
+
     query_status();
     log() << "Acquisition started.\n";
 }
@@ -170,25 +172,16 @@ void Digitizer::read() {
 
     // Stopwatch<std::chrono::microseconds> stopwatch;
 
-    // std::cout << "Read data\n";
-    // std::cout.flush();
     check(CAEN_DGTZ_ReadData(handle_,
                              CAEN_DGTZ_SLAVE_TERMINATED_READOUT_MBLT,
                              readout_buffer_,
                              &readout_size_));
-    // std::cout << "Done reading data: readout_size_ = " << readout_size_ << "\n";
-    // std::cout.flush();
 
-    // if (readout_size_ > 0 && readout_size_ < event_size_) {
-    //     std::cout << "Small readout size???\n";
-    //     std::cout.flush();
-    //     return;
-    // }
+    if (readout_size_ == 0) return;
 
-    
     UIntType num_events = 0;
     check(CAEN_DGTZ_GetNumEvents(handle_, readout_buffer_, readout_size_, &num_events));
-    // std::cout << "Done getting num events. readout_size - expected_size = " << (readout_size_ - num_events * event_size_) << "\n";
+    // std::cout << "Done getting num events. readout_size - num_events * expected_size = " << (readout_size_ - num_events * event_size_) << "\n";
     // std::cout.flush();
 
     
@@ -231,10 +224,16 @@ void Digitizer::print() const {
     log() << " ----- Board Info:\n"
               << "Model Name: " << board_info_.ModelName << "\n"
               << "Model: " << *BoardModelTable.get<CaenEnumValue::Name>(static_cast<CAEN_DGTZ_BoardModel_t>(board_info_.Model)) << "\n"
-              << "Family Code: " << *BoardFamilyCodeTable.get<CaenEnumValue::Name>(static_cast<CAEN_DGTZ_BoardFamilyCode_t>(board_info_.FamilyCode)) << "\n"
-              // << "Family Code: " << BoardFamilyCode_to_string(static_cast<CAEN_DGTZ_BoardFamilyCode_t>(board_info_.FamilyCode)) << "\n"
               << "Channels: " << board_info_.Channels << "\n"
+              << "Form Factor: " << *BoardFormFactorTable.get<CaenEnumValue::Name>(static_cast<CAEN_DGTZ_BoardFormFactor_t>(board_info_.FormFactor)) << "\n"
+              << "Family Code: " << *BoardFamilyCodeTable.get<CaenEnumValue::Name>(static_cast<CAEN_DGTZ_BoardFamilyCode_t>(board_info_.FamilyCode)) << "\n"
+              << "ROC Firmware Release: " << board_info_.ROC_FirmwareRel << "\n"
+              << "AMC Fimrware Release: " << board_info_.AMC_FirmwareRel << "\n"
               << "Serial Number: " << board_info_.SerialNumber << "\n"
+              << "PCB Revision: " << board_info_.PCB_Revision << "\n"
+              << "ADC N Bits: " << board_info_.ADC_NBits << "\n"
+              << "Comm Library Handle: " << board_info_.CommHandle << "\n"
+              << "VME Library Handle: " << board_info_.VMEHandle << "\n"
               << "\n";
 
 

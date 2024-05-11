@@ -34,6 +34,7 @@ using ZS_ModeIndexer            = CaenEnumIndexer<CAEN_DGTZ_ZS_Mode_t           
 using ThresholdWeightIndexer    = CaenEnumIndexer<CAEN_DGTZ_ThresholdWeight_t   , 2>;
 using TriggerPolarityIndexer    = CaenEnumIndexer<CAEN_DGTZ_TriggerPolarity_t   , 2>;
 using ConnectionTypeIndexer     = CaenEnumIndexer<CAEN_DGTZ_ConnectionType      , 8>;
+using BoardFormFactorIndexer    = CaenEnumIndexer<CAEN_DGTZ_BoardFormFactor_t   , 4>;
 
 using BoardFamilyCodeIndexer = EnumIndexer<CAEN_DGTZ_BoardFamilyCode_t,
     CAEN_DGTZ_XX724_FAMILY_CODE,
@@ -294,5 +295,13 @@ constexpr static auto ConnectionTypeTable = CaenEnumTable<ConnectionTypeIndexer>
     CAEN_ENUM_ENTRY(ETH_V4718      ),
     CAEN_ENUM_ENTRY(USB_V4718      )
 );
+
+constexpr static auto BoardFormFactorTable = CaenEnumTable<BoardFormFactorIndexer>::make_table(
+    CAEN_ENUM_ENTRY(VME64_FORM_FACTOR),
+    CAEN_ENUM_ENTRY(VME64X_FORM_FACTOR),
+    CAEN_ENUM_ENTRY(DESKTOP_FORM_FACTOR),
+    CAEN_ENUM_ENTRY(NIM_FORM_FACTOR)
+);
+
 
 #undef CAEN_ENUM_ENTRY

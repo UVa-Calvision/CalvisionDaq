@@ -362,7 +362,11 @@ void run_setup(std::istream& input, Digitizer& digi) {
                         run_common(digi, tokens);
                         break;
                     case CommandType::Group:
-                        run_group(digi, *group, tokens);
+                        if (group) {
+                            run_group(digi, *group, tokens);
+                        } else {
+                            std::cout << "[ERROR] No group to run command\n";
+                        }
                         break;
                     case CommandType::Trigger:
                         run_trigger(digi, tokens);

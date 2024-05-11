@@ -4,9 +4,9 @@ project(CalvisionDaq VERSION 1.0.0 LANGUAGES CXX)
 
 
 set(CMAKE_BUILD_TYPE Release)
-set(CMAKE_CXX_FLAGS "-g -fPIC -Wall -Wextra -Werror -Wno-reorder")
+set(CMAKE_CXX_FLAGS "-g -fPIC -Wall -Wextra -Werror -Wno-reorder -Wno-maybe-uninitialized")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
-set(CalvisionDaq_CXX_STD "cxx_std_14")
+set(CalvisionDaq_CXX_STD "cxx_std_17")
 
 set(CMAKE_SKIP_BUILD_RPATH FALSE)
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
@@ -32,6 +32,12 @@ find_package(ROOT REQUIRED COMPONENTS
     Core
     Tree
     RIO
+    Hist
+    Graf
+    Gpad
+    Graf3d
+    Imt
+    Gui
 )
 include(${ROOT_USE_FILE})
 

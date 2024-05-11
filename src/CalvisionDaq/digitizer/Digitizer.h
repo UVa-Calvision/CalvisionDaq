@@ -59,17 +59,17 @@ public:
     void readout(const PredicateFunc& keep_running) {
         begin_acquisition();
 
-        clear_data();
+        // clear_data();
 
-        while (/*running() &&*/ keep_running(*this)) {
+        while (running() && keep_running(*this)) {
 
-            read();
+            // read();
 
-            // query_status();
+            query_status();
 
-            // if (ready()) {
-            //     read();
-            // }
+            if (ready()) {
+                read();
+            }
         }
 
         end_acquisition();
@@ -97,7 +97,7 @@ private:
     CAEN_DGTZ_BoardInfo_t board_info_;
 
     char* readout_buffer_;
-    UIntType readout_size_;
+    UIntType readout_size_, allocated_size_;
     std::optional<UIntType> max_readout_count_;
 
     GroupArray<CAEN_DGTZ_DRS4Correction_t> correction_table_;
@@ -113,4 +113,6 @@ private:
     std::ostream* log_;
 
     CAEN_DGTZ_EnaDis_t get_fast_trigger_digitizing() const;
+
+    CAEN_DGTZ_X742_EVENT_t* event_742 = nullptr;
 };

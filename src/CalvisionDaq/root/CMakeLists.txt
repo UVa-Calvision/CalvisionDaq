@@ -3,6 +3,7 @@ set(LIBRARY_NAME "${PROJECT_NAME}Root")
 make_CalvisionDaq_library(${LIBRARY_NAME})
 
 target_link_libraries(${LIBRARY_NAME} PUBLIC
+    blas
     CalvisionDaqCommon
     CalvisionDaqDigitizer
     CppUtils::CppUtilsIO
@@ -10,6 +11,10 @@ target_link_libraries(${LIBRARY_NAME} PUBLIC
     ROOT::Tree
     ROOT::RIO
     ROOT::Matrix
+    ROOT::Hist
+    ROOT::Graf
+    ROOT::Gpad
+    ROOT::Imt
 )
 
 install_CalvisionDaq_library(${LIBRARY_NAME} root)
