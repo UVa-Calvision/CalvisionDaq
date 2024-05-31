@@ -1,3 +1,4 @@
+#pragma once
 #include "TMath.h"
 #include <vector>
 
@@ -55,7 +56,7 @@ void find_peaks(TH1D* hist) {
     std::cout << "bins per mV: " << bins_per_mv << "\n";
     
     // Find extrema in a 1.5 mV window
-    const int window = static_cast<int>(bins_per_mv * 1.5);
+    const int window = static_cast<int>(bins_per_mv * 1.25);
     std::cout << "window: " << window << "\n";
 
     int i_prev = 0;
@@ -71,7 +72,9 @@ void find_peaks(TH1D* hist) {
             }
         }
 
-        if (hist->GetBinContent(i_window_ext) == 0) {
+        //if (hist->GetBinContent(i_window_ext) == 0) {
+	// only search for peaks in regions with good stats
+	if (hist->GetBinContent(i_window_ext) < 40) {
             continue;
         }
 
@@ -79,7 +82,9 @@ void find_peaks(TH1D* hist) {
         if (!extremum(find_max, hist->GetBinContent(i_window_ext), hist->GetBinContent(i_prev))) {
 
             if (find_max) {
-                std::cout << "max: bin " << i_prev << ", content: " << hist->GetBinContent(i_prev) << ", center: " << hist->GetBinCenter(i_prev) << "\n";
+	      std::cout << "max: bin " << i_prev << ", content: " << hist->GetBinContent(i_prev) << ", center: " << hist->GetBinCenter(i_prev);
+	      if (!peaks.empty()) cout << ", delta: " << hist->GetBinCenter(i_prev) - peaks.back() << "\n";
+	      else cout << "\n";
                 auto line = new TLine(hist->GetBinCenter(i_prev), 0, hist->GetBinCenter(i_prev), hist->GetBinContent(i_prev));
                 line->SetLineColor(find_max ? kBlue : kGreen);
                 line->Draw();
@@ -114,6 +119,10 @@ void find_peaks(TH1D* hist) {
                 return HedgehogParams(par, N).func(t[0], N);
             },
             x_min, x_max, HedgehogParams::size(N_peaks));
+    hedgehog->SetParNames("mu0","sigma0","enf","M");
+    for (int i=0; i<N_peaks; ++i){
+      hedgehog->SetParName(i+4,TString::Format("A%d",i));
+    }
 
     HedgehogParams initial(hedgehog->GetParameters(), N_peaks);
     std::vector<double> lower_buffer(HedgehogParams::size(N_peaks), 0);
@@ -166,8 +175,10 @@ void find_peaks(TH1D* hist) {
         hedgehog->SetParLimits(i, lower_buffer[i], upper_buffer[i]);
     }
 
+    //hedgehog->FixParameter(3,initial.gain);
     hist->Fit("hedgehog" + TString(hist->GetName()), "N");
-
+    
+    
     hedgehog->SetNpx(10000);
     hedgehog->Draw("same");
 

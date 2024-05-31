@@ -26,7 +26,7 @@ public:
       std::cout << chainElement->GetTitle() << "\n";
     }
     
-    tree_->Print();
+    //tree_->Print();
     tree_->SetBranchAddress("horizontal_interval", &horizontal_interval_);
     tree_->SetBranchAddress("channels", channels_[0].data());
 
@@ -116,7 +116,7 @@ void analysis(TString filename, int channel, int nmax=-1) {
 
     int entries=tree.num_entries();
     if (nmax>0) entries = min(entries,nmax);
-    std::cout << "Avearing " << entries << " wave buffers\n";
+    std::cout << "Averaging " << entries << " wave buffers\n";
 
     
     for (int i = 0; i < entries; i++) {
