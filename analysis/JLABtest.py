@@ -89,8 +89,8 @@ if __name__ == '__main__':
     init_jlab_analyzer()
 
     # pulse height amplitude threshold for plotting waveforms
-    thresholdLG=[20,20,20,20]
-    thresholdHG=[20,20,20]
+    thresholdLG=[50,50,50,50]
+    thresholdHG=[50,50,50]
     cryNames=['PWO','PbF','BSO','BGO']
 
     tcLG=[]
