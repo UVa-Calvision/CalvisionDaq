@@ -27,7 +27,7 @@ int binCalc(double x_min, double x_max, double vgain) {
 class TreeReader {
 public:
   TreeReader(TString tree_name, TString filename)
-    : horizontal_interval_(1.0)
+  //: horizontal_interval_(1.0)
   {
     tree_ = new TChain(tree_name);
     tree_->Add(filename);
@@ -38,11 +38,14 @@ public:
       auto chainElement = static_cast<const TChainElement*>(op);
       //std::cout << chainElement->GetTitle() << "\n";
     }
-
+    Float_t dt;
     tree_->SetBranchAddress("channel0", channels_[0].data());
     tree_->SetBranchAddress("channel1", channels_[1].data());
     tree_->SetBranchAddress("channel2", channels_[2].data());
     tree_->SetBranchAddress("channel3", channels_[3].data());
+    tree_->SetBranchAddress("horizontal_interval", &dt);
+    tree_->GetEntry(0);
+    horizontal_interval_=dt;
   }
 
   UInt_t num_entries() const {
@@ -119,7 +122,7 @@ private:
 // return a multigraph
 TMultiGraph* plot_samples(TreeReader& tree, int channel, double threshold) {
 
-  const unsigned colors[]={kOrange+3,kBlack,kRed,kOrange+7};
+  //const unsigned colors[]={kOrange+3,kBlack,kRed,kOrange+7};
   //std::cout << "Plotting samples\n";
 
   unsigned int num_to_plot = tree.num_entries(); // 3;
