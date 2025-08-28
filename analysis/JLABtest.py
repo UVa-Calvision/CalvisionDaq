@@ -22,13 +22,13 @@ def getStats(datadir,outfile):
         for i in range(4):
             tr=r.TreeReader(f"crystal_{i}",f"{datadir}/outfile_LG.root")
             print2(f'{datadir}/outfile_LG.root, crystal_{i}: {tr.num_entries()} events',f)
-            print2(f'SampleTime: {tr.horizontal_interval()} ns',f)
+            print2(f'SampleInterval: {tr.horizontal_interval():0.1f} ns',f)
             for ch in range(4):
                 print2(f'   sigma ch{ch}={r.calc_noise(tr,ch):0.1f} mV',f)
         for i in range(3):
             tr=r.TreeReader(f"crystal_{i}",f"{datadir}/outfile_HG.root")
             print2(f"{datadir}/outfile_hG.root, crystal_{i}: {tr.num_entries()} events",f)
-            print2(f'SampleTime: {tr.horizontal_interval()} ns',f)
+            print2(f'SampleInterval: {tr.horizontal_interval():0.1f} ns',f)
             for ch in range(4):
                 print2(f'   sigma ch{ch}={r.calc_noise(tr,ch):0.1f} mV',f)
 
