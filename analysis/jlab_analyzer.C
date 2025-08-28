@@ -85,21 +85,22 @@ public:
     return static_cast<UInt_t>(t / horizontal_interval_);
   }
 
-  bool passes_suppression(UInt_t channel, double threshold, int minOT=4) const {
+  bool passes_suppression(UInt_t channel, double threshold, int minOT=4, int maxV=250) const {
     auto const volts = this->voltages(channel);
     Double_t max = volts[0];
     Double_t min = volts[0];
+    Double_t peak = 0;
     int n_successive=0;
 
-    for (unsigned int i = 20; i < N_Samples - 400; i++){
+    for (unsigned int i = 0; i < N_Samples-100; i++){
       max = std::max(volts[i], max);
       min = std::min(volts[i], min);
-      if ((max - min) > threshold) {
-	n_successive++;
-	if (n_successive == minOT) return true;
-      }
+      peak = std::max(peak,max-min);
+      if (peak > maxV) return false;
+      if (peak > threshold) n_successive++;
       else n_successive=0;
     }
+    if (n_successive >= minOT) return true;
     return false;
   }
 
@@ -125,7 +126,7 @@ TMultiGraph* plot_samples(TreeReader& tree, int channel, double threshold) {
   //const unsigned colors[]={kOrange+3,kBlack,kRed,kOrange+7};
   //std::cout << "Plotting samples\n";
 
-  unsigned int num_to_plot = tree.num_entries(); // 3;
+  unsigned int num_to_plot = tree.num_entries();
   auto mg = new TMultiGraph();
   mg->SetTitle(TString::Format("Sample buffer channel %d;Time [ns];Voltage [mV]", channel));
   for (unsigned int i = 0; i < num_to_plot; i++) {
