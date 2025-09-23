@@ -39,6 +39,20 @@ def set_cut_range(h, x_cut1=0, x_cut2=0):
     xmax = h.GetBinLowEdge(1+nx-x_cut2)
     h.GetXaxis().SetRangeUser(xmin, xmax)
 
+
+
+def trigger_plotter(datadir,gain,tree,tc,channel,threshold=5):
+    tr=r.TreeReader(tree,f"{datadir}/outfile_{gain}.root")
+    tc.Divide(1,2)
+    tc.cd(1)
+    tm=r.plot_samples(tr, channel, threshold)
+    tm.Draw("alp")
+    #trigger_data = np.zeros((2, 1024), dtype=np.float32)
+    #tree.SetBranchAddress("trigger", trigger_data)
+    tmt=r.plot_trigger(tr, channel, threshold)
+    tc.cd(2)
+    tmt.Draw("alp")
+    
         
 def plotter(datadir,gain,tree,tc,threshold=5):
     tr=r.TreeReader(tree,f"{datadir}/outfile_{gain}.root")
@@ -93,6 +107,7 @@ if __name__ == '__main__':
     thresholdHG=[50,50,50]
     cryNames=['PWO','PbF','BSO','BGO']
 
+    # plots of wave forms
     tcLG=[]
     tcHG=[]
     for ic in range(4):
@@ -102,9 +117,15 @@ if __name__ == '__main__':
             tcHG.append(r.TCanvas(f'tcHG{cryNames[ic]}',f'{cryNames[ic]} HG'))
             plotter(datadir,'HG',f'crystal_{ic}',tcHG[ic],thresholdHG[ic])
 
-    
+
+    # plot of waveforma and trigger data
+    tctrig=r.TCanvas("tcTrig","Trigger Example")
+    channel=0
+    trigger_plotter(datadir,'LG','crystal_0',tctrig,channel,thresholdLG[0])
+            
     getStats(datadir,f"{datadir}/runsummary.txt")
     tf_out=r.TFile(f"{datadir}/runsummary.root","recreate")
     for tc in itertools.chain(tcLG,tcHG): tc.Write()
+    tctrig.Write()
     tf_out.Close()
     input('hit return to exit')

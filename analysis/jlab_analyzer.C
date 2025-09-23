@@ -129,7 +129,7 @@ TMultiGraph* plot_samples(TreeReader& tree, int channel, double threshold) {
   unsigned int num_to_plot = tree.num_entries();
   auto mg = new TMultiGraph();
   mg->SetTitle(TString::Format("Sample buffer channel %d;Time [ns];Voltage [mV]", channel));
-  for (unsigned int i = 0; i < num_to_plot; i++) {
+  for (unsigned int i = 0; i < num_to_plot; ++i) {
     tree.get_entry(i);
     if (!tree.passes_suppression(channel, threshold))
       continue;
@@ -141,6 +141,33 @@ TMultiGraph* plot_samples(TreeReader& tree, int channel, double threshold) {
   //mg->Draw("ac");
   return mg;
 }
+
+
+// return a multigraph
+// plot trigger waveforms
+// the trigger is the same for all channels, bu we pass the channle so we can select events
+// matching the amplitude cut on a channel
+TMultiGraph* plot_trigger(TreeReader& tree, int channel, double threshold) {
+  unsigned int num_to_plot = tree.num_entries();
+  auto mg = new TMultiGraph();
+  Float_t trigger[2][1024];  // two trigger arrays, one per channels grouping
+  Double_t trig_wav[1024];
+  tree.GetTree()->SetBranchAddress("trigger", trigger);
+  mg->SetTitle(TString::Format("Trigger buffer channel %d;Time [ns];Voltage [mV]", channel));
+  for (unsigned int i = 0; i < num_to_plot; ++i) {
+    tree.get_entry(i);
+    if (!tree.passes_suppression(channel, threshold))
+      continue;
+    // note de need to concert to a couble array to use with the TGraph constructor
+    for (int i=0; i<1024; ++i) trig_wav[i]=trigger[0][i];  // we use group 0, the 1st 1024 samples only 
+    auto g = new TGraph(N_Samples, tree.time().data(), trig_wav); 
+    g->SetLineColor(kGray /* +i */);
+    mg->Add(g);
+  }
+  return mg;
+}
+
+
 
 // ncut = samples to cut from end to suppress the spike in the DRS readout
 TProfile* channel_profile(TreeReader& tree, int channel, double threshold) {
